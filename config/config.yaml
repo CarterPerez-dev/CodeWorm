@@ -5,7 +5,7 @@ debug: false
 data_dir: data
 
 devlog:
-  repo_path: ~/DevLog
+  repo_path: ~/dev/github/DevLog
   remote: origin
   branch: main
 
@@ -14,8 +14,8 @@ ollama:
   port: 11434
   model: qwen2.5:7b
   temperature: 0.3
-  num_ctx: 16384
-  num_predict: 4096
+  num_ctx: 4096
+  num_predict: 1024
   keep_alive: "-1"
 
   enabled: true
@@ -28,9 +28,9 @@ ollama:
   min_gap_minutes: 30
 
 analyzer:
-  min_complexity: 3
-  min_lines: 15
-  max_lines: 150
+  min_complexity: 1
+  min_lines: 8
+  max_lines: 250
   include_patterns:
     - "**/*.py"
     - "**/*.ts"
@@ -54,3 +54,8 @@ analyzer:
     - "**/.git/**"
     - "**/vendor/**"
     - "**/target/**"
+    - "**/*_qa/**"
+    - "**/qa_*.py"
+    - "**/seed_*.py"
+    - "**/seed/**"
+    - "**/fixtures/**"

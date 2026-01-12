@@ -13,61 +13,68 @@ from rich.console import Console
 from rich.table import Table
 
 from codeworm.core import configure_logging, load_settings
+from codeworm.core.config import load_config_from_yaml
 
 
 console = Console()
 
 
 @click.group()
-@click.option("--debug", is_flag = True, help = "Enable debug logging")
+@click.option("--debug", is_flag=True, help="Enable debug logging")
+@click.option(
+    "--config",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to config directory",
+)
 @click.pass_context
-def cli(ctx: click.Context, debug: bool) -> None:
+def cli(ctx: click.Context, debug: bool, config: Path | None) -> None:
     """
     CodeWorm - Autonomous Code Documentation Agent
     """
     ctx.ensure_object(dict)
     ctx.obj["debug"] = debug
+    ctx.obj["config_dir"] = config
 
 
 @cli.command()
 @click.option(
     "--devlog",
-    type = click.Path(path_type = Path),
-    required = True,
-    help = "Path to DevLog repository"
+    type=click.Path(path_type=Path),
+    help="Path to DevLog repository (overrides config)",
 )
 @click.option(
     "--repo",
-    type = (str,
-            str),
-    multiple = True,
-    help = "Add repo as NAME PATH pairs"
+    type=(str, str),
+    multiple=True,
+    help="Add repo as NAME PATH pairs (overrides config)",
 )
 @click.pass_context
-def run(ctx: click.Context, devlog: Path, repo: tuple) -> None:
+def run(ctx: click.Context, devlog: Path | None, repo: tuple) -> None:
     """
     Run the CodeWorm daemon with scheduler
     """
     from codeworm.daemon import CodeWormDaemon
 
-    repos = [
-        {
-            "name": name,
-            "path": Path(path),
-            "weight": 5
-        } for name, path in repo
-    ]
+    overrides = {"debug": ctx.obj["debug"]}
 
-    settings = load_settings(
-        debug = ctx.obj["debug"],
-        devlog = {"repo_path": devlog},
-        repos = repos,
-    )
-    configure_logging(debug = settings.debug)
+    if devlog:
+        overrides["devlog"] = {"repo_path": devlog}
+
+    if repo:
+        repos = [{"name": name, "path": Path(path), "weight": 5} for name, path in repo]
+        overrides["repos"] = repos
+
+    settings = load_settings(config_dir=ctx.obj["config_dir"], **overrides)
+    configure_logging(debug=settings.debug)
+
+    if not settings.repos:
+        console.print("[red]Error:[/red] No repositories configured")
+        console.print("Add repos to config/repos.yaml or use --repo NAME PATH")
+        raise SystemExit(1)
 
     console.print("[bold green]Starting CodeWorm[/bold green]")
-    console.print(f"  DevLog: {devlog}")
-    console.print(f"  Repos: {len(repos)}")
+    console.print(f"  DevLog: {settings.devlog.repo_path}")
+    console.print(f"  Repos: {len(settings.repos)}")
 
     daemon = CodeWormDaemon(settings)
     daemon.run()
@@ -76,40 +83,42 @@ def run(ctx: click.Context, devlog: Path, repo: tuple) -> None:
 @cli.command("run-once")
 @click.option(
     "--devlog",
-    type = click.Path(path_type = Path),
-    required = True,
-    help = "Path to DevLog repository"
+    type=click.Path(path_type=Path),
+    help="Path to DevLog repository (overrides config)",
 )
 @click.option(
     "--repo",
-    type = (str,
-            str),
-    multiple = True,
-    help = "Add repo as NAME PATH pairs"
+    type=(str, str),
+    multiple=True,
+    help="Add repo as NAME PATH pairs (overrides config)",
 )
 @click.pass_context
-def run_once(ctx: click.Context, devlog: Path, repo: tuple) -> None:
+def run_once(ctx: click.Context, devlog: Path | None, repo: tuple) -> None:
     """
     Run a single documentation cycle then exit
     """
     from codeworm.daemon import CodeWormDaemon
 
-    repos = [
-        {
-            "name": name,
-            "path": Path(path),
-            "weight": 5
-        } for name, path in repo
-    ]
+    overrides = {"debug": ctx.obj["debug"]}
 
-    settings = load_settings(
-        debug = ctx.obj["debug"],
-        devlog = {"repo_path": devlog},
-        repos = repos,
-    )
-    configure_logging(debug = settings.debug)
+    if devlog:
+        overrides["devlog"] = {"repo_path": devlog}
+
+    if repo:
+        repos = [{"name": name, "path": Path(path), "weight": 5} for name, path in repo]
+        overrides["repos"] = repos
+
+    settings = load_settings(config_dir=ctx.obj["config_dir"], **overrides)
+    configure_logging(debug=settings.debug)
+
+    if not settings.repos:
+        console.print("[red]Error:[/red] No repositories configured")
+        console.print("Add repos to config/repos.yaml or use --repo NAME PATH")
+        raise SystemExit(1)
 
     console.print("[bold]Running single documentation cycle...[/bold]")
+    console.print(f"  DevLog: {settings.devlog.repo_path}")
+    console.print(f"  Repos: {[r.name for r in settings.repos]}")
 
     daemon = CodeWormDaemon(settings)
     result = asyncio.run(daemon.run_once())
@@ -117,20 +126,17 @@ def run_once(ctx: click.Context, devlog: Path, repo: tuple) -> None:
     if result:
         console.print("[green]Documentation generated successfully[/green]")
     else:
-        console.print(
-            "[yellow]No candidates found or all already documented[/yellow]"
-        )
+        console.print("[yellow]No candidates found or all already documented[/yellow]")
 
 
 @cli.command()
 @click.option(
     "--repo",
-    type = click.Path(exists = True,
-                      path_type = Path),
-    required = True,
-    help = "Repository to analyze"
+    type=click.Path(exists=True, path_type=Path),
+    required=True,
+    help="Repository to analyze",
 )
-@click.option("--limit", default = 20, help = "Max candidates to show")
+@click.option("--limit", default=20, help="Max candidates to show")
 @click.pass_context
 def analyze(ctx: click.Context, repo: Path, limit: int) -> None:
     """
@@ -139,26 +145,26 @@ def analyze(ctx: click.Context, repo: Path, limit: int) -> None:
     from codeworm.analysis import CodeAnalyzer, ParserManager
     from codeworm.core.config import RepoEntry
 
-    configure_logging(debug = ctx.obj["debug"])
+    configure_logging(debug=ctx.obj["debug"])
     ParserManager.initialize()
 
-    repo_config = RepoEntry(name = repo.name, path = repo, weight = 5)
+    repo_config = RepoEntry(name=repo.name, path=repo, weight=5)
     analyzer = CodeAnalyzer([repo_config])
 
     console.print(f"[bold]Analyzing {repo}...[/bold]\n")
 
-    candidates = analyzer.find_candidates(repo = repo_config, limit = limit)
+    candidates = analyzer.find_candidates(repo=repo_config, limit=limit)
 
     if not candidates:
         console.print("[yellow]No candidates found[/yellow]")
         return
 
-    table = Table(title = f"Top {len(candidates)} Documentation Candidates")
-    table.add_column("Score", style = "cyan", justify = "right")
-    table.add_column("Function", style = "green")
-    table.add_column("File", style = "dim")
-    table.add_column("Lines", justify = "right")
-    table.add_column("Complexity", justify = "right")
+    table = Table(title=f"Top {len(candidates)} Documentation Candidates")
+    table.add_column("Score", style="cyan", justify="right")
+    table.add_column("Function", style="green")
+    table.add_column("File", style="dim")
+    table.add_column("Lines", justify="right")
+    table.add_column("Complexity", justify="right")
 
     for c in candidates:
         table.add_row(
@@ -173,31 +179,30 @@ def analyze(ctx: click.Context, repo: Path, limit: int) -> None:
 
 
 @cli.command("schedule-preview")
-@click.option("--days", default = 1, help = "Number of days to preview")
-@click.option(
-    "--timezone",
-    default = "America/Los_Angeles",
-    help = "Timezone for schedule"
-)
+@click.option("--days", default=1, help="Number of days to preview")
+@click.option("--timezone", help="Timezone for schedule (overrides config)")
 @click.pass_context
-def schedule_preview(ctx: click.Context, days: int, timezone: str) -> None:
+def schedule_preview(ctx: click.Context, days: int, timezone: str | None) -> None:
     """
     Preview upcoming scheduled commit times
     """
     from codeworm.scheduler import CodeWormScheduler
-    from codeworm.core.config import ScheduleSettings
 
-    settings = ScheduleSettings(timezone = timezone)
-    scheduler = CodeWormScheduler(settings)
+    settings = load_settings(config_dir=ctx.obj["config_dir"])
+    configure_logging(debug=ctx.obj["debug"])
 
-    preview = scheduler.get_schedule_preview(days = days)
+    if timezone:
+        settings.schedule.timezone = timezone
+
+    scheduler = CodeWormScheduler(settings.schedule)
+    preview = scheduler.get_schedule_preview(days=days)
 
     console.print(f"[bold]Schedule Preview ({days} day(s))[/bold]\n")
 
     table = Table()
-    table.add_column("Time", style = "cyan")
-    table.add_column("Hour", justify = "right")
-    table.add_column("Day", style = "dim")
+    table.add_column("Time", style="cyan")
+    table.add_column("Hour", justify="right")
+    table.add_column("Day", style="dim")
 
     for entry in preview:
         day_type = "[yellow]Weekend[/yellow]" if entry["is_weekend"] else "Weekday"
@@ -214,29 +219,27 @@ def schedule_preview(ctx: click.Context, days: int, timezone: str) -> None:
 @cli.command()
 @click.option(
     "--devlog",
-    type = click.Path(path_type = Path),
-    required = True,
-    help = "Path to DevLog repository"
+    type=click.Path(path_type=Path),
+    help="Path to DevLog repository (overrides config)",
 )
 @click.pass_context
-def stats(ctx: click.Context, devlog: Path) -> None:
+def stats(ctx: click.Context, devlog: Path | None) -> None:
     """
     Show documentation statistics
     """
     from codeworm.core import StateManager
 
-    settings = load_settings(
-        debug = ctx.obj["debug"],
-        devlog = {"repo_path": devlog},
-    )
+    overrides = {"debug": ctx.obj["debug"]}
+    if devlog:
+        overrides["devlog"] = {"repo_path": devlog}
+
+    settings = load_settings(config_dir=ctx.obj["config_dir"], **overrides)
 
     state = StateManager(settings.db_path)
     stats_data = state.get_stats()
 
     console.print("\n[bold]CodeWorm Statistics[/bold]\n")
-    console.print(
-        f"Total documented: [green]{stats_data['total_documented']}[/green]"
-    )
+    console.print(f"Total documented: [green]{stats_data['total_documented']}[/green]")
     console.print(f"Last 7 days: [cyan]{stats_data['last_7_days']}[/cyan]")
 
     if stats_data["by_repo"]:
@@ -248,22 +251,26 @@ def stats(ctx: click.Context, devlog: Path) -> None:
 @cli.command()
 @click.option(
     "--devlog",
-    type = click.Path(path_type = Path),
-    required = True,
-    help = "Path to DevLog repository"
+    type=click.Path(path_type=Path),
+    help="Path to DevLog repository (overrides config)",
 )
 @click.pass_context
-def init(ctx: click.Context, devlog: Path) -> None:
+def init(ctx: click.Context, devlog: Path | None) -> None:
     """
     Initialize a new DevLog repository
     """
     from codeworm.git import DevLogRepository
 
-    configure_logging(debug = ctx.obj["debug"])
+    overrides = {}
+    if devlog:
+        overrides["devlog"] = {"repo_path": devlog}
 
-    console.print(f"[bold]Initializing DevLog at {devlog}...[/bold]")
+    settings = load_settings(config_dir=ctx.obj["config_dir"], **overrides)
+    configure_logging(debug=ctx.obj["debug"])
 
-    repo = DevLogRepository(repo_path = devlog)
+    console.print(f"[bold]Initializing DevLog at {settings.devlog.repo_path}...[/bold]")
+
+    repo = DevLogRepository(repo_path=settings.devlog.repo_path)
     repo.ensure_directory_structure()
 
     console.print("[green]DevLog initialized successfully[/green]")
