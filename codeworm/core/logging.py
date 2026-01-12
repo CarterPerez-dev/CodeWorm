@@ -2,6 +2,7 @@
 ⒸAngelaMos | 2026
 logging.py
 """
+import logging
 import sys
 
 import orjson
@@ -20,13 +21,12 @@ def configure_logging(json_mode: bool | None = None, debug: bool = False) -> Non
     if json_mode is None:
         json_mode = not sys.stderr.isatty()
 
-    log_level = "DEBUG" if debug else "INFO"
+    log_level = logging.DEBUG if debug else logging.INFO
 
     shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
-        structlog.processors.TimeStamper(fmt = "iso",
-                                         utc = True),
+        structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
     ]
@@ -34,22 +34,20 @@ def configure_logging(json_mode: bool | None = None, debug: bool = False) -> Non
     if json_mode:
         processors = [
             *shared_processors,
-            structlog.processors.JSONRenderer(serializer = _json_serializer),
+            structlog.processors.JSONRenderer(serializer=_json_serializer),
         ]
     else:
         processors = [
             *shared_processors,
-            structlog.dev.ConsoleRenderer(colors = True),
+            structlog.dev.ConsoleRenderer(colors=True),
         ]
 
     structlog.configure(
-        processors = processors,
-        wrapper_class = structlog.make_filtering_bound_logger(
-            structlog.stdlib._NAME_TO_LEVEL[log_level]
-        ),
-        context_class = dict,
-        logger_factory = structlog.PrintLoggerFactory(),
-        cache_logger_on_first_use = True,
+        processors=processors,
+        wrapper_class=structlog.make_filtering_bound_logger(log_level),
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(),
+        cache_logger_on_first_use=True,
     )
 
 
