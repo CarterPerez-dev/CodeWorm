@@ -31,7 +31,6 @@ class ComplexityMetrics:
     """
     Complexity metrics for a function or method
     """
-
     name: str
     cyclomatic_complexity: int
     nloc: int
@@ -77,7 +76,6 @@ class FileComplexity:
     """
     Aggregated complexity metrics for a file
     """
-
     file_path: Path
     functions: list[ComplexityMetrics]
     average_complexity: float
@@ -97,7 +95,6 @@ class ComplexityAnalyzer:
     """
     Analyzes code complexity using Lizard
     """
-
     def __init__(self, language: Language | None = None) -> None:
         """
         Initialize analyzer optionally filtered to a language

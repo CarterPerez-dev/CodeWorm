@@ -27,7 +27,6 @@ class ParsedFunction:
     """
     A function or method extracted from parsed source code
     """
-
     name: str
     start_line: int
     end_line: int
@@ -44,7 +43,6 @@ class ParsedClass:
     """
     A class extracted from parsed source code
     """
-
     name: str
     start_line: int
     end_line: int
@@ -59,7 +57,6 @@ class ParserManager:
     Thread-safe tree-sitter parser management
     Parsers are not thread-safe so we use thread-local storage
     """
-
     _languages: dict[CodeLanguage, Language] = {}
     _local = threading.local()
     _initialized = False
@@ -85,7 +82,7 @@ class ParserManager:
     @classmethod
     def get_parser(cls, language: CodeLanguage) -> Parser:
         """
-        Get a thread-local parser for the specified language
+        Get a thread local parser for the specified language
         """
         if not cls._initialized:
             cls.initialize()
@@ -135,7 +132,6 @@ class CodeExtractor:
     """
     Extracts functions and classes from parsed syntax trees
     """
-
     def __init__(self, source: str, language: CodeLanguage) -> None:
         """
         Initialize extractor with source code and language
