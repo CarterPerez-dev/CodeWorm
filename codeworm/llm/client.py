@@ -60,7 +60,7 @@ class OllamaClient:
     Async client for Ollama API
     Handles connection pooling, retries, and OOM recovery
     """
-    DEFAULT_TIMEOUT = httpx.Timeout(connect=10.0, read=600.0, write=30.0)
+    DEFAULT_TIMEOUT = httpx.Timeout(timeout=600.0, connect=10.0)
 
     def __init__(self, settings: OllamaSettings) -> None:
         """

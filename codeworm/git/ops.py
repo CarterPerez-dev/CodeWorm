@@ -4,15 +4,19 @@ git/ops.py
 """
 from __future__ import annotations
 
+import time
 import random
 import subprocess
-import time
-from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
+from datetime import datetime
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from git import GitCommandError, InvalidGitRepositoryError, Repo
+from git import (
+    GitCommandError,
+    InvalidGitRepositoryError, 
+    Repo,
+)
 from git.exc import GitError
 
 from codeworm.core import get_logger
@@ -28,31 +32,21 @@ class GitOperationError(Exception):
     Base exception for git operations
     """
 
-    pass
-
-
 class GitPushError(GitOperationError):
     """
     Failed to push to remote
     """
-
-    pass
-
 
 class GitConflictError(GitOperationError):
     """
     Merge conflict detected
     """
 
-    pass
-
-
 @dataclass
 class CommitResult:
     """
     Result of a git commit operation
     """
-
     commit_hash: str
     message: str
     files_changed: int
@@ -82,7 +76,6 @@ class DevLogRepository:
     """
     Manages the DevLog output repository
     """
-
     def __init__(self, repo_path: Path, remote: str = "", branch: str = "main") -> None:
         """
         Initialize with repository path

@@ -8,7 +8,11 @@ from pathlib import Path
 import click
 from rich.console import Console
 
-from codeworm.core import configure_logging, get_logger, load_settings
+from codeworm.core import (
+    configure_logging, 
+    get_logger, 
+    load_settings,
+)
 
 console = Console()
 
@@ -97,3 +101,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+    

@@ -2,10 +2,10 @@
 ⒸAngelaMos | 2026
 models.py
 """
-from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Annotated
+from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -14,7 +14,6 @@ class Language(str, Enum):
     """
     Supported programming languages for code analysis
     """
-
     PYTHON = "python"
     TYPESCRIPT = "typescript"
     TSX = "tsx"
@@ -38,7 +37,6 @@ class RepoConfig(BaseModel):
     """
     Configuration for a source repository to scan
     """
-
     name: str
     path: Path
     weight: Annotated[int, Field(ge=1, le=10)] = 5
@@ -58,7 +56,6 @@ class CodeSnippet(BaseModel):
     """
     A code snippet extracted from a source file for analysis
     """
-
     repo: str
     file_path: Path
     function_name: str | None = None
@@ -88,7 +85,6 @@ class DocumentedSnippet(BaseModel):
     Record of a snippet that has been documented and committed
     Stored in SQLite for deduplication
     """
-
     id: str
     source_repo: str
     source_file: str
@@ -110,7 +106,6 @@ class AnalysisResult(BaseModel):
     """
     Result of analyzing and documenting a code snippet
     """
-
     snippet: CodeSnippet
     documentation: str
     commit_message: str
@@ -121,7 +116,6 @@ class CommitType(str, Enum):
     """
     Types of commits the daemon can make for natural variation
     """
-
     NEW_DOC = "new_doc"
     UPDATE_DOC = "update_doc"
     MINOR_FIX = "minor_fix"
@@ -132,7 +126,6 @@ class ScheduledCommit(BaseModel):
     """
     A commit scheduled for future execution
     """
-
     scheduled_time: datetime
     commit_type: CommitType
     analysis_result: AnalysisResult | None = None
