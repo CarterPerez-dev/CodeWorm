@@ -23,39 +23,26 @@ class OllamaError(Exception):
     Base exception for Ollama errors
     """
 
-    pass
-
-
 class OllamaConnectionError(OllamaError):
     """
     Failed to connect to Ollama
     """
-
-    pass
-
 
 class OllamaModelError(OllamaError):
     """
     Model-related error like OOM
     """
 
-    pass
-
-
 class OllamaTimeoutError(OllamaError):
     """
     Request timed out
     """
-
-    pass
-
 
 @dataclass
 class GenerationResult:
     """
     Result from an LLM generation request
     """
-
     text: str
     model: str
     prompt_tokens: int
@@ -73,7 +60,6 @@ class OllamaClient:
     Async client for Ollama API
     Handles connection pooling, retries, and OOM recovery
     """
-
     DEFAULT_TIMEOUT = httpx.Timeout(connect=10.0, read=600.0, write=30.0)
 
     def __init__(self, settings: OllamaSettings) -> None:
