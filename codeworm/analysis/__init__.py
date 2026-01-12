@@ -8,6 +8,7 @@ from codeworm.analysis.parser import CodeExtractor, ParsedClass, ParsedFunction,
 from codeworm.analysis.scanner import RepoScanner, ScannedFile, WeightedRepoSelector
 from codeworm.analysis.scoring import GitStats, InterestScore, InterestScorer
 
+
 __all__ = [
     "AnalysisCandidate",
     "CodeAnalyzer",

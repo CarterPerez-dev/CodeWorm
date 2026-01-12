@@ -24,14 +24,14 @@ class DevLogSettings(BaseModel):
     remote: str = ""
     branch: str = "main"
 
-    @field_validator("repo_path", mode="before")
+    @field_validator("repo_path", mode = "before")
     @classmethod
     def expand_path(cls, v: Any) -> Path:
         """
         Expand ~ and environment variables in path
         """
         if isinstance(v, str):
-            return Path(os.path.expanduser(os.path.expandvars(v)))
+            return Path(os.path.expandvars(v)).expanduser()
         return v
 
 
@@ -60,11 +60,13 @@ class ScheduleSettings(BaseModel):
     Settings for human-like commit scheduling
     """
     enabled: bool = True
-    min_commits_per_day: Annotated[int, Field(ge=1, le=50)] = 12
-    max_commits_per_day: Annotated[int, Field(ge=1, le=50)] = 18
+    min_commits_per_day: Annotated[int, Field(ge = 1, le = 50)] = 12
+    max_commits_per_day: Annotated[int, Field(ge = 1, le = 50)] = 18
     timezone: str = "America/Los_Angeles"
-    prefer_hours: list[int] = Field(default_factory=lambda: [9, 10, 11, 14, 15, 16, 20, 21, 22])
-    avoid_hours: list[int] = Field(default_factory=lambda: [3, 4, 5, 6, 7])
+    prefer_hours: list[int] = Field(
+        default_factory = lambda: [9, 10, 11, 14, 15, 16, 20, 21, 22]
+    )
+    avoid_hours: list[int] = Field(default_factory = lambda: [3, 4, 5, 6, 7])
     weekend_reduction: float = 0.7
     min_gap_minutes: int = 30
 
@@ -77,10 +79,11 @@ class AnalyzerSettings(BaseModel):
     max_lines: int = 150
     min_lines: int = 15
     include_patterns: list[str] = Field(
-        default_factory=lambda: ["**/*.py", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.go", "**/*.rs"]
+        default_factory = lambda:
+        ["**/*.py", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.go", "**/*.rs"]
     )
     exclude_patterns: list[str] = Field(
-        default_factory=lambda: [
+        default_factory = lambda: [
             "**/test_*.py",
             "**/*_test.py",
             "**/*_test.go",
@@ -94,8 +97,7 @@ class AnalyzerSettings(BaseModel):
             "**/build/**",
             "**/.git/**",
             "**/vendor/**",
-            "**/target/**",
-        ]
+            "**/target/**",]
     )
 
 
@@ -105,17 +107,17 @@ class RepoEntry(BaseModel):
     """
     name: str
     path: Path
-    weight: Annotated[int, Field(ge=1, le=10)] = 5
+    weight: Annotated[int, Field(ge = 1, le = 10)] = 5
     enabled: bool = True
 
-    @field_validator("path", mode="before")
+    @field_validator("path", mode = "before")
     @classmethod
     def expand_path(cls, v: Any) -> Path:
         """
         Expand ~ and environment variables in path
         """
         if isinstance(v, str):
-            return Path(os.path.expanduser(os.path.expandvars(v)))
+            return Path(os.path.expandvars(v)).expanduser()
         return v
 
 
@@ -127,7 +129,7 @@ class PromptSettings(BaseModel):
     system_prompt: str = ""
     documentation_template: str = ""
     commit_message_template: str = ""
-    language_hints: dict[str, str] = Field(default_factory=dict)
+    language_hints: dict[str, str] = Field(default_factory = dict)
 
 
 class CodeWormSettings(BaseSettings):
@@ -136,32 +138,32 @@ class CodeWormSettings(BaseSettings):
     Loads from YAML config files with env var overrides
     """
     model_config = SettingsConfigDict(
-        env_prefix="CODEWORM_",
-        env_nested_delimiter="__",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
+        env_prefix = "CODEWORM_",
+        env_nested_delimiter = "__",
+        env_file = ".env",
+        env_file_encoding = "utf-8",
+        extra = "ignore",
     )
 
     debug: bool = False
     data_dir: Path = Path("data")
     config_dir: Path = DEFAULT_CONFIG_DIR
     devlog: DevLogSettings
-    ollama: OllamaSettings = Field(default_factory=OllamaSettings)
-    schedule: ScheduleSettings = Field(default_factory=ScheduleSettings)
-    analyzer: AnalyzerSettings = Field(default_factory=AnalyzerSettings)
-    repos: list[RepoEntry] = Field(default_factory=list)
-    prompts: PromptSettings = Field(default_factory=PromptSettings)
+    ollama: OllamaSettings = Field(default_factory = OllamaSettings)
+    schedule: ScheduleSettings = Field(default_factory = ScheduleSettings)
+    analyzer: AnalyzerSettings = Field(default_factory = AnalyzerSettings)
+    repos: list[RepoEntry] = Field(default_factory = list)
+    prompts: PromptSettings = Field(default_factory = PromptSettings)
     github_token: SecretStr | None = None
 
-    @field_validator("data_dir", "config_dir", mode="before")
+    @field_validator("data_dir", "config_dir", mode = "before")
     @classmethod
     def expand_path(cls, v: Any) -> Path:
         """
         Expand ~ and environment variables in path
         """
         if isinstance(v, str):
-            return Path(os.path.expanduser(os.path.expandvars(v)))
+            return Path(os.path.expandvars(v)).expanduser()
         return v
 
     @property
@@ -179,7 +181,7 @@ def load_yaml_file(path: Path) -> dict:
     """
     if not path.exists():
         return {}
-    with open(path) as f:
+    with path.open() as f:
         return yaml.safe_load(f) or {}
 
 
@@ -190,7 +192,9 @@ def merge_configs(base: dict, override: dict) -> dict:
     """
     result = base.copy()
     for key, value in override.items():
-        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+        if key in result and isinstance(result[key],
+                                        dict) and isinstance(value,
+                                                             dict):
             result[key] = merge_configs(result[key], value)
         else:
             result[key] = value
@@ -204,13 +208,15 @@ def load_config_from_yaml(config_dir: Path | None = None) -> dict:
     if config_dir is None:
         config_dir = DEFAULT_CONFIG_DIR
 
-    config_dir = Path(os.path.expanduser(os.path.expandvars(str(config_dir))))
+    config_dir = Path(os.path.expandvars(str(config_dir))).expanduser()
 
     config = load_yaml_file(config_dir / "config.yaml")
 
     repos_config = load_yaml_file(config_dir / "repos.yaml")
     if "repositories" in repos_config:
-        repos = [r for r in repos_config["repositories"] if r.get("enabled", True)]
+        repos = [
+            r for r in repos_config["repositories"] if r.get("enabled", True)
+        ]
         config["repos"] = repos
 
     prompts_config = load_yaml_file(config_dir / "prompts.yaml")
@@ -230,11 +236,16 @@ def get_settings() -> CodeWormSettings:
     """
     global _settings
     if _settings is None:
-        raise RuntimeError("Settings not initialized. Call load_settings() first.")
+        raise RuntimeError(
+            "Settings not initialized. Call load_settings() first."
+        )
     return _settings
 
 
-def load_settings(config_dir: Path | str | None = None, **overrides) -> CodeWormSettings:
+def load_settings(
+    config_dir: Path | str | None = None,
+    **overrides
+) -> CodeWormSettings:
     """
     Load settings from YAML files and optional overrides
 
@@ -247,7 +258,7 @@ def load_settings(config_dir: Path | str | None = None, **overrides) -> CodeWorm
     global _settings
 
     if config_dir is not None:
-        config_dir = Path(os.path.expanduser(os.path.expandvars(str(config_dir))))
+        config_dir = Path(os.path.expandvars(str(config_dir))).expanduser()
 
     yaml_config = load_config_from_yaml(config_dir)
 
@@ -257,7 +268,7 @@ def load_settings(config_dir: Path | str | None = None, **overrides) -> CodeWorm
         merged["config_dir"] = config_dir
 
     _settings = CodeWormSettings(**merged)
-    _settings.data_dir.mkdir(parents=True, exist_ok=True)
+    _settings.data_dir.mkdir(parents = True, exist_ok = True)
 
     return _settings
 

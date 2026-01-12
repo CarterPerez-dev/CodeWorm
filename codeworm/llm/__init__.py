@@ -14,6 +14,7 @@ from codeworm.llm.client import (
 from codeworm.llm.generator import DocumentationGenerator, GeneratedDocumentation, generate_documentation
 from codeworm.llm.prompts import PromptBuilder, PromptContext, build_commit_prompt, build_documentation_prompt
 
+
 __all__ = [
     "DocumentationGenerator",
     "GeneratedDocumentation",

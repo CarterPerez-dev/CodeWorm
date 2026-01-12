@@ -22,15 +22,16 @@ class Language(str, Enum):
     RUST = "rust"
 
 
-LANGUAGE_EXTENSIONS: dict[str, Language] = {
-    ".py": Language.PYTHON,
-    ".ts": Language.TYPESCRIPT,
-    ".tsx": Language.TSX,
-    ".js": Language.JAVASCRIPT,
-    ".jsx": Language.JAVASCRIPT,
-    ".go": Language.GO,
-    ".rs": Language.RUST,
-}
+LANGUAGE_EXTENSIONS: dict[str,
+                          Language] = {
+                              ".py": Language.PYTHON,
+                              ".ts": Language.TYPESCRIPT,
+                              ".tsx": Language.TSX,
+                              ".js": Language.JAVASCRIPT,
+                              ".jsx": Language.JAVASCRIPT,
+                              ".go": Language.GO,
+                              ".rs": Language.RUST,
+                          }
 
 
 class RepoConfig(BaseModel):
@@ -39,7 +40,7 @@ class RepoConfig(BaseModel):
     """
     name: str
     path: Path
-    weight: Annotated[int, Field(ge=1, le=10)] = 5
+    weight: Annotated[int, Field(ge = 1, le = 10)] = 5
     enabled: bool = True
 
     @field_validator("path")
@@ -99,7 +100,9 @@ class DocumentedSnippet(BaseModel):
     def display_name(self) -> str:
         if self.class_name and self.function_name:
             return f"{self.class_name}.{self.function_name}"
-        return self.function_name or self.class_name or Path(self.source_file).stem
+        return self.function_name or self.class_name or Path(
+            self.source_file
+        ).stem
 
 
 class AnalysisResult(BaseModel):

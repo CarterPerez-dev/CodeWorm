@@ -7,7 +7,7 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import tree_sitter_go as tsgo
 import tree_sitter_javascript as tsjs
@@ -57,7 +57,7 @@ class ParserManager:
     Thread-safe tree-sitter parser management
     Parsers are not thread-safe so we use thread-local storage
     """
-    _languages: dict[CodeLanguage, Language] = {}
+    _languages: ClassVar[dict[CodeLanguage, Language]] = {}
     _local = threading.local()
     _initialized = False
 
@@ -108,7 +108,8 @@ class ParserManager:
 
 
 PYTHON_QUERIES = {
-    "function": """
+    "function":
+    """
         (function_definition
             name: (identifier) @name
             parameters: (parameters) @params
@@ -120,7 +121,8 @@ PYTHON_QUERIES = {
                 name: (identifier) @name
                 parameters: (parameters) @params)) @decorated_function
     """,
-    "class": """
+    "class":
+    """
         (class_definition
             name: (identifier) @name
             body: (block) @body) @class
@@ -167,7 +169,9 @@ class CodeExtractor:
         if first_stmt.type == "expression_statement":
             expr = first_stmt.children[0] if first_stmt.children else None
             if expr and expr.type == "string":
-                return self._node_text(expr).strip('"""\'\'\'')
+                text = self._node_text(expr)
+                text = text.strip('"').strip("'")
+                return text
 
         return None
 
@@ -177,7 +181,9 @@ class CodeExtractor:
         """
         if self.language == CodeLanguage.PYTHON:
             yield from self._extract_python_functions()
-        elif self.language in (CodeLanguage.TYPESCRIPT, CodeLanguage.TSX, CodeLanguage.JAVASCRIPT):
+        elif self.language in (CodeLanguage.TYPESCRIPT,
+                               CodeLanguage.TSX,
+                               CodeLanguage.JAVASCRIPT):
             yield from self._extract_js_functions()
         elif self.language == CodeLanguage.GO:
             yield from self._extract_go_functions()
@@ -188,7 +194,8 @@ class CodeExtractor:
         """
         Extract functions from Python source
         """
-        def visit(node: Node, class_name: str | None = None) -> Iterator[ParsedFunction]:
+        def visit(node: Node,
+                  class_name: str | None = None) -> Iterator[ParsedFunction]:
             if node.type == "class_definition":
                 name_node = node.child_by_field_name("name")
                 if name_node:
@@ -206,17 +213,19 @@ class CodeExtractor:
                     params = []
                     if params_node:
                         for param in params_node.children:
-                            if param.type in ("identifier", "typed_parameter", "default_parameter"):
+                            if param.type in ("identifier",
+                                              "typed_parameter",
+                                              "default_parameter"):
                                 params.append(self._node_text(param))
 
                     yield ParsedFunction(
-                        name=name,
-                        start_line=node.start_point[0] + 1,
-                        end_line=node.end_point[0] + 1,
-                        source=self._node_text(node),
-                        class_name=class_name,
-                        parameters=params,
-                        docstring=self._get_docstring(node),
+                        name = name,
+                        start_line = node.start_point[0] + 1,
+                        end_line = node.end_point[0] + 1,
+                        source = self._node_text(node),
+                        class_name = class_name,
+                        parameters = params,
+                        docstring = self._get_docstring(node),
                     )
                 return
 
@@ -244,7 +253,8 @@ class CodeExtractor:
         """
         Extract functions from JavaScript/TypeScript source
         """
-        def visit(node: Node, class_name: str | None = None) -> Iterator[ParsedFunction]:
+        def visit(node: Node,
+                  class_name: str | None = None) -> Iterator[ParsedFunction]:
             if node.type in ("class_declaration", "class"):
                 name_node = node.child_by_field_name("name")
                 current_class = self._node_text(name_node) if name_node else None
@@ -252,19 +262,21 @@ class CodeExtractor:
                     yield from visit(child, current_class)
                 return
 
-            if node.type in ("function_declaration", "method_definition", "arrow_function"):
+            if node.type in ("function_declaration",
+                             "method_definition",
+                             "arrow_function"):
                 name_node = node.child_by_field_name("name")
                 name = self._node_text(name_node) if name_node else "<anonymous>"
 
                 is_async = any(c.type == "async" for c in node.children)
 
                 yield ParsedFunction(
-                    name=name,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                    source=self._node_text(node),
-                    class_name=class_name,
-                    is_async=is_async,
+                    name = name,
+                    start_line = node.start_point[0] + 1,
+                    end_line = node.end_point[0] + 1,
+                    source = self._node_text(node),
+                    class_name = class_name,
+                    is_async = is_async,
                 )
                 return
 
@@ -282,10 +294,10 @@ class CodeExtractor:
                 name_node = node.child_by_field_name("name")
                 if name_node:
                     yield ParsedFunction(
-                        name=self._node_text(name_node),
-                        start_line=node.start_point[0] + 1,
-                        end_line=node.end_point[0] + 1,
-                        source=self._node_text(node),
+                        name = self._node_text(name_node),
+                        start_line = node.start_point[0] + 1,
+                        end_line = node.end_point[0] + 1,
+                        source = self._node_text(node),
                     )
                 return
 
@@ -301,11 +313,11 @@ class CodeExtractor:
 
                 if name_node:
                     yield ParsedFunction(
-                        name=self._node_text(name_node),
-                        start_line=node.start_point[0] + 1,
-                        end_line=node.end_point[0] + 1,
-                        source=self._node_text(node),
-                        class_name=class_name,
+                        name = self._node_text(name_node),
+                        start_line = node.start_point[0] + 1,
+                        end_line = node.end_point[0] + 1,
+                        source = self._node_text(node),
+                        class_name = class_name,
                     )
                 return
 
@@ -318,7 +330,8 @@ class CodeExtractor:
         """
         Extract functions from Rust source
         """
-        def visit(node: Node, impl_name: str | None = None) -> Iterator[ParsedFunction]:
+        def visit(node: Node,
+                  impl_name: str | None = None) -> Iterator[ParsedFunction]:
             if node.type == "impl_item":
                 type_node = node.child_by_field_name("type")
                 current_impl = self._node_text(type_node) if type_node else None
@@ -331,12 +344,12 @@ class CodeExtractor:
                 if name_node:
                     is_async = any(c.type == "async" for c in node.children)
                     yield ParsedFunction(
-                        name=self._node_text(name_node),
-                        start_line=node.start_point[0] + 1,
-                        end_line=node.end_point[0] + 1,
-                        source=self._node_text(node),
-                        class_name=impl_name,
-                        is_async=is_async,
+                        name = self._node_text(name_node),
+                        start_line = node.start_point[0] + 1,
+                        end_line = node.end_point[0] + 1,
+                        source = self._node_text(node),
+                        class_name = impl_name,
+                        is_async = is_async,
                     )
                 return
 
@@ -365,12 +378,12 @@ class CodeExtractor:
                     class_methods = [m for m in methods if m.class_name == name]
 
                     yield ParsedClass(
-                        name=name,
-                        start_line=node.start_point[0] + 1,
-                        end_line=node.end_point[0] + 1,
-                        source=self._node_text(node),
-                        methods=class_methods,
-                        docstring=self._get_docstring(node),
+                        name = name,
+                        start_line = node.start_point[0] + 1,
+                        end_line = node.end_point[0] + 1,
+                        source = self._node_text(node),
+                        methods = class_methods,
+                        docstring = self._get_docstring(node),
                     )
                 return
 
@@ -384,5 +397,5 @@ def parse_file(file_path: Path, language: CodeLanguage) -> CodeExtractor:
     """
     Parse a file and return an extractor for it
     """
-    source = file_path.read_text(encoding="utf-8")
+    source = file_path.read_text(encoding = "utf-8")
     return CodeExtractor(source, language)

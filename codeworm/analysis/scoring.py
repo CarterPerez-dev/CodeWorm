@@ -4,11 +4,12 @@ analysis/scoring.py
 """
 from __future__ import annotations
 
-from pathlib import Path
+import contextlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from codeworm.analysis.complexity import ComplexityMetrics
 
@@ -84,14 +85,22 @@ class InterestScore:
         Convert to dictionary for logging
         """
         return {
-            "total": round(self.total, 2),
-            "complexity": round(self.complexity_score, 2),
-            "length": round(self.length_score, 2),
-            "nesting": round(self.nesting_score, 2),
-            "parameters": round(self.parameter_score, 2),
-            "churn": round(self.churn_score, 2),
-            "novelty": round(self.novelty_score, 2),
-            "pattern_bonus": round(self.pattern_bonus, 2),
+            "total": round(self.total,
+                           2),
+            "complexity": round(self.complexity_score,
+                                2),
+            "length": round(self.length_score,
+                            2),
+            "nesting": round(self.nesting_score,
+                             2),
+            "parameters": round(self.parameter_score,
+                                2),
+            "churn": round(self.churn_score,
+                           2),
+            "novelty": round(self.novelty_score,
+                             2),
+            "pattern_bonus": round(self.pattern_bonus,
+                                   2),
             "rating": self.rating,
         }
 
@@ -101,7 +110,7 @@ class InterestScorer:
     Scores code snippets based on how interesting they are to document
     Uses weighted factors normalized to 0-100 scale
     """
-    WEIGHTS = {
+    WEIGHTS: ClassVar[dict[str, float]] = {
         "complexity": 0.35,
         "length": 0.15,
         "nesting": 0.15,
@@ -117,7 +126,7 @@ class InterestScorer:
     CHURN_CAP = 5
     NOVELTY_DAYS = 30
 
-    PATTERN_BONUSES = {
+    PATTERN_BONUSES: ClassVar[dict[str, int]] = {
         "decorator": 5,
         "async": 5,
         "context_manager": 10,
@@ -148,37 +157,50 @@ class InterestScorer:
         if git_stats is None:
             git_stats = GitStats()
 
-        complexity_score = min(metrics.cyclomatic_complexity / self.COMPLEXITY_CAP, 1.0) * 100
+        complexity_score = min(
+            metrics.cyclomatic_complexity / self.COMPLEXITY_CAP,
+            1.0
+        ) * 100
         length_score = min(metrics.nloc / self.LENGTH_CAP, 1.0) * 100
-        nesting_score = min(metrics.max_nesting_depth / self.NESTING_CAP, 1.0) * 100
+        nesting_score = min(
+            metrics.max_nesting_depth / self.NESTING_CAP,
+            1.0
+        ) * 100
         param_score = min(metrics.parameter_count / self.PARAM_CAP, 1.0) * 100
 
         churn_score = min(git_stats.commit_count_30d / self.CHURN_CAP, 1.0) * 100
 
         days_old = git_stats.days_since_modified
-        novelty_score = max(0, (self.NOVELTY_DAYS - days_old) / self.NOVELTY_DAYS) * 100
+        novelty_score = max(
+            0,
+            (self.NOVELTY_DAYS - days_old) / self.NOVELTY_DAYS
+        ) * 100
 
-        pattern_bonus = self._calculate_pattern_bonus(decorators, is_async, source)
+        pattern_bonus = self._calculate_pattern_bonus(
+            decorators,
+            is_async,
+            source
+        )
 
         weighted_total = (
-            complexity_score * self.WEIGHTS["complexity"]
-            + length_score * self.WEIGHTS["length"]
-            + nesting_score * self.WEIGHTS["nesting"]
-            + param_score * self.WEIGHTS["parameters"]
-            + churn_score * self.WEIGHTS["churn"]
-            + novelty_score * self.WEIGHTS["novelty"]
-            + pattern_bonus
+            complexity_score * self.WEIGHTS["complexity"] +
+            length_score * self.WEIGHTS["length"] +
+            nesting_score * self.WEIGHTS["nesting"] +
+            param_score * self.WEIGHTS["parameters"] +
+            churn_score * self.WEIGHTS["churn"] +
+            novelty_score * self.WEIGHTS["novelty"] + pattern_bonus
         )
 
         return InterestScore(
-            total=min(weighted_total, 100),
-            complexity_score=complexity_score * self.WEIGHTS["complexity"],
-            length_score=length_score * self.WEIGHTS["length"],
-            nesting_score=nesting_score * self.WEIGHTS["nesting"],
-            parameter_score=param_score * self.WEIGHTS["parameters"],
-            churn_score=churn_score * self.WEIGHTS["churn"],
-            novelty_score=novelty_score * self.WEIGHTS["novelty"],
-            pattern_bonus=pattern_bonus,
+            total = min(weighted_total,
+                        100),
+            complexity_score = complexity_score * self.WEIGHTS["complexity"],
+            length_score = length_score * self.WEIGHTS["length"],
+            nesting_score = nesting_score * self.WEIGHTS["nesting"],
+            parameter_score = param_score * self.WEIGHTS["parameters"],
+            churn_score = churn_score * self.WEIGHTS["churn"],
+            novelty_score = novelty_score * self.WEIGHTS["novelty"],
+            pattern_bonus = pattern_bonus,
         )
 
     def _calculate_pattern_bonus(
@@ -215,7 +237,12 @@ class InterestScorer:
 
         return bonus
 
-    def get_git_stats(self, file_path: Path, start_line: int = 0, end_line: int = 0) -> GitStats:
+    def get_git_stats(
+        self,
+        file_path: Path,
+        _start_line: int = 0,
+        _end_line: int = 0
+    ) -> GitStats:
         """
         Get git statistics for a file
         """
@@ -229,16 +256,15 @@ class InterestScorer:
             authors = set()
 
             now = datetime.now()
-            cutoff_30d = now - timedelta(days=30)
-            cutoff_90d = now - timedelta(days=90)
+            cutoff_30d = now - timedelta(days = 30)
+            cutoff_90d = now - timedelta(days = 90)
 
             rel_path = str(file_path)
-            try:
+            with contextlib.suppress(ValueError):
                 rel_path = str(file_path.relative_to(self.git_repo.working_dir))
-            except ValueError:
-                pass
 
-            for commit in self.git_repo.iter_commits(paths=rel_path, max_count=100):
+            for commit in self.git_repo.iter_commits(paths = rel_path,
+                                                     max_count = 100):
                 commit_date = datetime.fromtimestamp(commit.committed_date)
 
                 if last_modified is None:
@@ -251,14 +277,16 @@ class InterestScorer:
 
                 authors.add(commit.author.email)
 
-            is_new = commits_90d <= 2 and last_modified and (now - last_modified).days <= 14
+            is_new = commits_90d <= 2 and last_modified and (
+                now - last_modified
+            ).days <= 14
 
             return GitStats(
-                commit_count_30d=commits_30d,
-                commit_count_90d=commits_90d,
-                last_modified=last_modified,
-                unique_authors=len(authors),
-                is_new=is_new,
+                commit_count_30d = commits_30d,
+                commit_count_90d = commits_90d,
+                last_modified = last_modified,
+                unique_authors = len(authors),
+                is_new = is_new,
             )
 
         except Exception:

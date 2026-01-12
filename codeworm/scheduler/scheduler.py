@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from datetime import datetime, time, timedelta
-from typing import TYPE_CHECKING, Callable
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
+from collections.abc import Callable
 from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -18,35 +19,36 @@ from codeworm.core import get_logger
 if TYPE_CHECKING:
     from codeworm.core.config import ScheduleSettings
 
+
 logger = get_logger("scheduler")
 
-
-HOUR_WEIGHTS: dict[int, float] = {
-    0: 0.02,
-    1: 0.01,
-    2: 0.005,
-    3: 0.0,
-    4: 0.0,
-    5: 0.0,
-    6: 0.01,
-    7: 0.03,
-    8: 0.08,
-    9: 0.12,
-    10: 0.15,
-    11: 0.14,
-    12: 0.08,
-    13: 0.10,
-    14: 0.14,
-    15: 0.15,
-    16: 0.14,
-    17: 0.10,
-    18: 0.06,
-    19: 0.05,
-    20: 0.10,
-    21: 0.12,
-    22: 0.10,
-    23: 0.05,
-}
+HOUR_WEIGHTS: dict[int,
+                   float] = {
+                       0: 0.02,
+                       1: 0.01,
+                       2: 0.005,
+                       3: 0.0,
+                       4: 0.0,
+                       5: 0.0,
+                       6: 0.01,
+                       7: 0.03,
+                       8: 0.08,
+                       9: 0.12,
+                       10: 0.15,
+                       11: 0.14,
+                       12: 0.08,
+                       13: 0.10,
+                       14: 0.14,
+                       15: 0.15,
+                       16: 0.14,
+                       17: 0.10,
+                       18: 0.06,
+                       19: 0.05,
+                       20: 0.10,
+                       21: 0.12,
+                       22: 0.10,
+                       23: 0.05,
+                   }
 
 
 @dataclass
@@ -68,7 +70,7 @@ class DailySchedule:
     Schedule of tasks for a single day
     """
     date: datetime
-    tasks: list[ScheduledTask] = field(default_factory=list)
+    tasks: list[ScheduledTask] = field(default_factory = list)
     target_commits: int = 0
 
     @property
@@ -108,7 +110,11 @@ class HumanLikeTrigger(BaseTrigger):
         self._daily_times: list[datetime] = []
         self._current_day: datetime | None = None
 
-    def get_next_fire_time(self, previous_fire_time: datetime | None, now: datetime) -> datetime | None:
+    def get_next_fire_time(
+        self,
+        _previous_fire_time: datetime | None,
+        now: datetime
+    ) -> datetime | None:
         """
         Calculate the next fire time
         """
@@ -123,8 +129,13 @@ class HumanLikeTrigger(BaseTrigger):
             if scheduled_time > now_local:
                 return scheduled_time.astimezone(ZoneInfo("UTC"))
 
-        tomorrow = now_local + timedelta(days=1)
-        tomorrow_start = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
+        tomorrow = now_local + timedelta(days = 1)
+        tomorrow_start = tomorrow.replace(
+            hour = 0,
+            minute = 0,
+            second = 0,
+            microsecond = 0
+        )
         self._generate_daily_schedule(tomorrow_start)
         self._current_day = tomorrow.date()
 
@@ -148,9 +159,9 @@ class HumanLikeTrigger(BaseTrigger):
 
         logger.debug(
             "daily_schedule_generated",
-            date=day.date().isoformat(),
-            commit_count=len(self._daily_times),
-            is_weekend=is_weekend,
+            date = day.date().isoformat(),
+            commit_count = len(self._daily_times),
+            is_weekend = is_weekend,
         )
 
     def _generate_times(self, day: datetime, count: int) -> list[datetime]:
@@ -167,11 +178,16 @@ class HumanLikeTrigger(BaseTrigger):
         while len(times) < count and attempts < max_attempts:
             attempts += 1
 
-            hour = random.choices(hours, weights=weights, k=1)[0]
+            hour = random.choices(hours, weights = weights, k = 1)[0]
             minute = random.randint(0, 59)
             second = random.randint(0, 59)
 
-            candidate = day.replace(hour=hour, minute=minute, second=second, microsecond=0)
+            candidate = day.replace(
+                hour = hour,
+                minute = minute,
+                second = second,
+                microsecond = 0
+            )
 
             if self._is_valid_time(candidate, times):
                 times.append(candidate)
@@ -195,11 +211,15 @@ class HumanLikeTrigger(BaseTrigger):
 
         return weights
 
-    def _is_valid_time(self, candidate: datetime, existing: list[datetime]) -> bool:
+    def _is_valid_time(
+        self,
+        candidate: datetime,
+        existing: list[datetime]
+    ) -> bool:
         """
         Check if candidate time is valid given existing scheduled times
         """
-        min_gap = timedelta(minutes=self.min_gap_minutes)
+        min_gap = timedelta(minutes = self.min_gap_minutes)
 
         for existing_time in existing:
             if abs(candidate - existing_time) < min_gap:
@@ -218,7 +238,7 @@ class CodeWormScheduler:
         """
         self.settings = settings
         self.timezone = ZoneInfo(settings.timezone)
-        self._scheduler = BackgroundScheduler(timezone=self.timezone)
+        self._scheduler = BackgroundScheduler(timezone = self.timezone)
         self._task_callback: Callable[[], None] | None = None
         self._daily_schedule: DailySchedule | None = None
 
@@ -237,30 +257,30 @@ class CodeWormScheduler:
             return
 
         trigger = HumanLikeTrigger(
-            min_commits=self.settings.min_commits_per_day,
-            max_commits=self.settings.max_commits_per_day,
-            min_gap_minutes=self.settings.min_gap_minutes,
-            prefer_hours=self.settings.prefer_hours,
-            avoid_hours=self.settings.avoid_hours,
-            weekend_reduction=self.settings.weekend_reduction,
-            timezone=self.settings.timezone,
+            min_commits = self.settings.min_commits_per_day,
+            max_commits = self.settings.max_commits_per_day,
+            min_gap_minutes = self.settings.min_gap_minutes,
+            prefer_hours = self.settings.prefer_hours,
+            avoid_hours = self.settings.avoid_hours,
+            weekend_reduction = self.settings.weekend_reduction,
+            timezone = self.settings.timezone,
         )
 
         self._scheduler.add_job(
             self._execute_task,
-            trigger=trigger,
-            id="documentation_task",
-            replace_existing=True,
-            misfire_grace_time=3600,
-            coalesce=True,
+            trigger = trigger,
+            id = "documentation_task",
+            replace_existing = True,
+            misfire_grace_time = 3600,
+            coalesce = True,
         )
 
         self._scheduler.start()
         logger.info(
             "scheduler_started",
-            min_commits=self.settings.min_commits_per_day,
-            max_commits=self.settings.max_commits_per_day,
-            timezone=self.settings.timezone,
+            min_commits = self.settings.min_commits_per_day,
+            max_commits = self.settings.max_commits_per_day,
+            timezone = self.settings.timezone,
         )
 
     def stop(self, wait: bool = True) -> None:
@@ -268,7 +288,7 @@ class CodeWormScheduler:
         Stop the scheduler
         """
         if self._scheduler.running:
-            self._scheduler.shutdown(wait=wait)
+            self._scheduler.shutdown(wait = wait)
             logger.info("scheduler_stopped")
 
     def _execute_task(self) -> None:
@@ -280,7 +300,7 @@ class CodeWormScheduler:
                 logger.info("executing_scheduled_task")
                 self._task_callback()
             except Exception as e:
-                logger.exception("scheduled_task_failed", error=str(e))
+                logger.exception("scheduled_task_failed", error = str(e))
         else:
             logger.warning("no_task_callback_set")
 
@@ -298,28 +318,30 @@ class CodeWormScheduler:
         Preview upcoming scheduled times
         """
         trigger = HumanLikeTrigger(
-            min_commits=self.settings.min_commits_per_day,
-            max_commits=self.settings.max_commits_per_day,
-            min_gap_minutes=self.settings.min_gap_minutes,
-            prefer_hours=self.settings.prefer_hours,
-            avoid_hours=self.settings.avoid_hours,
-            weekend_reduction=self.settings.weekend_reduction,
-            timezone=self.settings.timezone,
+            min_commits = self.settings.min_commits_per_day,
+            max_commits = self.settings.max_commits_per_day,
+            min_gap_minutes = self.settings.min_gap_minutes,
+            prefer_hours = self.settings.prefer_hours,
+            avoid_hours = self.settings.avoid_hours,
+            weekend_reduction = self.settings.weekend_reduction,
+            timezone = self.settings.timezone,
         )
 
         preview: list[dict] = []
         now = datetime.now(self.timezone)
 
         for day_offset in range(days):
-            day = now + timedelta(days=day_offset)
+            day = now + timedelta(days = day_offset)
             trigger._generate_daily_schedule(day)
 
             for scheduled_time in trigger._daily_times:
-                preview.append({
-                    "time": scheduled_time.isoformat(),
-                    "hour": scheduled_time.hour,
-                    "is_weekend": scheduled_time.weekday() >= 5,
-                })
+                preview.append(
+                    {
+                        "time": scheduled_time.isoformat(),
+                        "hour": scheduled_time.hour,
+                        "is_weekend": scheduled_time.weekday() >= 5,
+                    }
+                )
 
         return preview
 

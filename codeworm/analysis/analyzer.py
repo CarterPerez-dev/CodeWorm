@@ -15,7 +15,7 @@ from codeworm.analysis.complexity import ComplexityAnalyzer, ComplexityMetrics
 from codeworm.analysis.parser import CodeExtractor, ParsedFunction, ParserManager
 from codeworm.analysis.scanner import RepoScanner, ScannedFile, WeightedRepoSelector
 from codeworm.analysis.scoring import GitStats, InterestScore, InterestScorer
-from codeworm.models import CodeSnippet, Language
+from codeworm.models import CodeSnippet
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -64,8 +64,8 @@ class CodeAnalyzer:
         self.settings = settings
         self.repo_selector = WeightedRepoSelector(repos)
         self.scanner = RepoScanner(
-            include_patterns=settings.include_patterns if settings else None,
-            exclude_patterns=settings.exclude_patterns if settings else None,
+            include_patterns = settings.include_patterns if settings else None,
+            exclude_patterns = settings.exclude_patterns if settings else None,
         )
         self.complexity_analyzer = ComplexityAnalyzer()
         self.scorer = InterestScorer()
@@ -85,12 +85,13 @@ class CodeAnalyzer:
                 self._git_repos[repo_path] = None
         return self._git_repos[repo_path]
 
-    def analyze_file(self, scanned_file: ScannedFile) -> Iterator[AnalysisCandidate]:
+    def analyze_file(self,
+                     scanned_file: ScannedFile) -> Iterator[AnalysisCandidate]:
         """
         Analyze a single file and yield documentation candidates
         """
         try:
-            source = scanned_file.path.read_text(encoding="utf-8")
+            source = scanned_file.path.read_text(encoding = "utf-8")
         except Exception:
             return
 
@@ -132,37 +133,38 @@ class CodeAnalyzer:
                 )
             else:
                 interest = InterestScore(
-                    total=20,
-                    complexity_score=0,
-                    length_score=0,
-                    nesting_score=0,
-                    parameter_score=0,
-                    churn_score=0,
-                    novelty_score=0,
+                    total = 20,
+                    complexity_score = 0,
+                    length_score = 0,
+                    nesting_score = 0,
+                    parameter_score = 0,
+                    churn_score = 0,
+                    novelty_score = 0,
                 )
 
             snippet = CodeSnippet(
-                repo=scanned_file.repo_name,
-                file_path=scanned_file.path,
-                function_name=parsed_func.name,
-                class_name=parsed_func.class_name,
-                language=scanned_file.language,
-                source=parsed_func.source,
-                start_line=parsed_func.start_line,
-                end_line=parsed_func.end_line,
-                complexity=complexity.cyclomatic_complexity if complexity else 0,
-                nesting_depth=complexity.max_nesting_depth if complexity else 0,
-                parameter_count=complexity.parameter_count if complexity else 0,
-                interest_score=interest.total,
+                repo = scanned_file.repo_name,
+                file_path = scanned_file.path,
+                function_name = parsed_func.name,
+                class_name = parsed_func.class_name,
+                language = scanned_file.language,
+                source = parsed_func.source,
+                start_line = parsed_func.start_line,
+                end_line = parsed_func.end_line,
+                complexity = complexity.cyclomatic_complexity
+                if complexity else 0,
+                nesting_depth = complexity.max_nesting_depth if complexity else 0,
+                parameter_count = complexity.parameter_count if complexity else 0,
+                interest_score = interest.total,
             )
 
             yield AnalysisCandidate(
-                snippet=snippet,
-                parsed_function=parsed_func,
-                complexity=complexity,
-                git_stats=git_stats,
-                interest_score=interest,
-                scanned_file=scanned_file,
+                snippet = snippet,
+                parsed_function = parsed_func,
+                complexity = complexity,
+                git_stats = git_stats,
+                interest_score = interest,
+                scanned_file = scanned_file,
             )
 
     def _should_skip_function(self, func: ParsedFunction) -> bool:
@@ -172,7 +174,14 @@ class CodeAnalyzer:
         if func.name.startswith("_") and not func.name.startswith("__"):
             return random.random() > 0.3
 
-        skip_names = {"__init__", "__str__", "__repr__", "main", "setUp", "tearDown"}
+        skip_names = {
+            "__init__",
+            "__str__",
+            "__repr__",
+            "main",
+            "setUp",
+            "tearDown"
+        }
         if func.name in skip_names:
             return True
 
@@ -195,13 +204,11 @@ class CodeAnalyzer:
         """
         candidates: list[AnalysisCandidate] = []
 
-        if repo:
-            repos_to_scan = [repo]
-        else:
-            repos_to_scan = [r for r in self.repos if r.enabled]
+        repos_to_scan = [repo] if repo else [r for r in self.repos if r.enabled]
 
         for repo_config in repos_to_scan:
-            for scanned_file in self.scanner.scan_repo(repo_config.path, repo_config.name):
+            for scanned_file in self.scanner.scan_repo(repo_config.path,
+                                                       repo_config.name):
                 for candidate in self.analyze_file(scanned_file):
                     if candidate.is_worth_documenting:
                         candidates.append(candidate)
@@ -209,8 +216,8 @@ class CodeAnalyzer:
                     if len(candidates) >= limit * 3:
                         break
 
-        candidates.sort(key=lambda c: c.score, reverse=True)
-        return candidates[:limit]
+        candidates.sort(key = lambda c: c.score, reverse = True)
+        return candidates[: limit]
 
     def select_for_documentation(
         self,
@@ -224,7 +231,7 @@ class CodeAnalyzer:
         if not selected_repo:
             return []
 
-        candidates = self.find_candidates(repo=selected_repo, limit=100)
+        candidates = self.find_candidates(repo = selected_repo, limit = 100)
         eligible = [c for c in candidates if c.score >= min_score]
 
         if not eligible:
@@ -234,17 +241,18 @@ class CodeAnalyzer:
             return eligible
 
         weights = [c.score for c in eligible]
-        selected = random.choices(eligible, weights=weights, k=count)
+        selected = random.choices(eligible, weights = weights, k = count)
 
         return selected
 
 
-def analyze_repository(repo_path: Path, repo_name: str) -> list[AnalysisCandidate]:
+def analyze_repository(repo_path: Path,
+                       repo_name: str) -> list[AnalysisCandidate]:
     """
     Convenience function to analyze a single repository
     """
     from codeworm.core.config import RepoEntry
 
-    repo = RepoEntry(name=repo_name, path=repo_path, weight=5)
+    repo = RepoEntry(name = repo_name, path = repo_path, weight = 5)
     analyzer = CodeAnalyzer([repo])
     return analyzer.find_candidates(repo)

@@ -15,6 +15,7 @@ from codeworm.core import get_logger
 if TYPE_CHECKING:
     from codeworm.core.config import OllamaSettings
 
+
 logger = get_logger("llm")
 
 
@@ -23,20 +24,24 @@ class OllamaError(Exception):
     Base exception for Ollama errors
     """
 
+
 class OllamaConnectionError(OllamaError):
     """
     Failed to connect to Ollama
     """
+
 
 class OllamaModelError(OllamaError):
     """
     Model-related error like OOM
     """
 
+
 class OllamaTimeoutError(OllamaError):
     """
     Request timed out
     """
+
 
 @dataclass
 class GenerationResult:
@@ -60,7 +65,7 @@ class OllamaClient:
     Async client for Ollama API
     Handles connection pooling, retries, and OOM recovery
     """
-    DEFAULT_TIMEOUT = httpx.Timeout(timeout=600.0, connect=10.0)
+    DEFAULT_TIMEOUT = httpx.Timeout(timeout = 600.0, connect = 10.0)
 
     def __init__(self, settings: OllamaSettings) -> None:
         """
@@ -77,12 +82,12 @@ class OllamaClient:
         """
         if self._client is None:
             self._client = httpx.AsyncClient(
-                base_url=self.base_url,
-                timeout=self.DEFAULT_TIMEOUT,
-                limits=httpx.Limits(
-                    max_keepalive_connections=20,
-                    max_connections=50,
-                    keepalive_expiry=60.0,
+                base_url = self.base_url,
+                timeout = self.DEFAULT_TIMEOUT,
+                limits = httpx.Limits(
+                    max_keepalive_connections = 20,
+                    max_connections = 50,
+                    keepalive_expiry = 60.0,
                 ),
             )
         return self._client
@@ -114,7 +119,7 @@ class OllamaClient:
             client = await self._get_client()
             response = await client.post(
                 "/api/generate",
-                json={
+                json = {
                     "model": self.settings.model,
                     "prompt": "",
                     "keep_alive": self.settings.keep_alive,
@@ -128,15 +133,15 @@ class OllamaClient:
                 self._model_loaded = True
                 logger.info(
                     "model_prewarmed",
-                    model=self.settings.model,
-                    num_ctx=self.settings.num_ctx,
+                    model = self.settings.model,
+                    num_ctx = self.settings.num_ctx,
                 )
                 return True
 
             return False
 
         except Exception as e:
-            logger.error("prewarm_failed", error=str(e))
+            logger.error("prewarm_failed", error = str(e))
             return False
 
     async def generate(
@@ -168,11 +173,12 @@ class OllamaClient:
             payload["system"] = system
 
         try:
-            response = await client.post("/api/generate", json=payload)
+            response = await client.post("/api/generate", json = payload)
 
             if response.status_code != 200:
                 error_text = response.text
-                if "out of memory" in error_text.lower() or "cuda" in error_text.lower():
+                if "out of memory" in error_text.lower(
+                ) or "cuda" in error_text.lower():
                     raise OllamaModelError(f"Model OOM: {error_text}")
                 raise OllamaError(f"Generation failed: {error_text}")
 
@@ -187,18 +193,22 @@ class OllamaClient:
                 tokens_per_sec = completion_tokens / (total_duration / 1000)
 
             return GenerationResult(
-                text=data.get("response", ""),
-                model=data.get("model", self.settings.model),
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-                total_duration_ms=int(total_duration),
-                tokens_per_second=tokens_per_sec,
+                text = data.get("response",
+                                ""),
+                model = data.get("model",
+                                 self.settings.model),
+                prompt_tokens = prompt_tokens,
+                completion_tokens = completion_tokens,
+                total_duration_ms = int(total_duration),
+                tokens_per_second = tokens_per_sec,
             )
 
         except httpx.ConnectError as e:
-            raise OllamaConnectionError(f"Cannot connect to Ollama at {self.base_url}: {e}")
+            raise OllamaConnectionError(
+                f"Cannot connect to Ollama at {self.base_url}: {e}"
+            ) from e
         except httpx.TimeoutException as e:
-            raise OllamaTimeoutError(f"Request timed out: {e}")
+            raise OllamaTimeoutError(f"Request timed out: {e}") from e
 
     async def generate_with_retry(
         self,
@@ -217,7 +227,7 @@ class OllamaClient:
                 return await self.generate(prompt, system)
 
             except OllamaModelError:
-                logger.warning("model_oom_detected", attempt=attempt + 1)
+                logger.warning("model_oom_detected", attempt = attempt + 1)
                 await self._recover_from_oom()
                 last_error = OllamaModelError("Model OOM after recovery attempt")
 
@@ -243,7 +253,7 @@ class OllamaClient:
             client = await self._get_client()
             await client.post(
                 "/api/generate",
-                json={
+                json = {
                     "model": self.settings.model,
                     "keep_alive": "0",
                 },
@@ -254,19 +264,21 @@ class OllamaClient:
             reduced_ctx = min(self.settings.num_ctx, 8192)
             await client.post(
                 "/api/generate",
-                json={
+                json = {
                     "model": self.settings.model,
                     "prompt": "",
                     "keep_alive": self.settings.keep_alive,
-                    "options": {"num_ctx": reduced_ctx},
+                    "options": {
+                        "num_ctx": reduced_ctx
+                    },
                 },
             )
 
-            logger.info("oom_recovery_complete", new_ctx=reduced_ctx)
+            logger.info("oom_recovery_complete", new_ctx = reduced_ctx)
 
         except Exception as e:
-            logger.error("oom_recovery_failed", error=str(e))
-            raise OllamaModelError(f"OOM recovery failed: {e}")
+            logger.error("oom_recovery_failed", error = str(e))
+            raise OllamaModelError(f"OOM recovery failed: {e}") from e
 
     async def list_models(self) -> list[dict]:
         """
@@ -289,6 +301,6 @@ async def create_client(settings: OllamaSettings) -> OllamaClient:
     client = OllamaClient(settings)
 
     if not await client.health_check():
-        logger.warning("ollama_not_responding", url=settings.base_url)
+        logger.warning("ollama_not_responding", url = settings.base_url)
 
     return client

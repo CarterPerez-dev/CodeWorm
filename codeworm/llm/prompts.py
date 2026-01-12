@@ -11,9 +11,10 @@ from codeworm.models import Language
 
 if TYPE_CHECKING:
     from codeworm.analysis import AnalysisCandidate
+    from codeworm.core.config import PromptSettings
 
 
-SYSTEM_PROMPT = """You are a technical documentation writer analyzing code snippets.
+DEFAULT_SYSTEM_PROMPT = """You are a technical documentation writer analyzing code snippets.
 
 Your task is to write clear, concise documentation that explains:
 - What the code does (the "what")
@@ -29,7 +30,7 @@ Rules:
 6. Focus on practical understanding, not line-by-line description"""
 
 
-DOCUMENTATION_TEMPLATE = """Analyze and document this {language} code:
+DEFAULT_DOCUMENTATION_TEMPLATE = """Analyze and document this {language} code:
 
 ```{language}
 {source}
@@ -49,7 +50,7 @@ Write technical documentation (100-200 words) covering:
 4. Any patterns or gotchas worth noting"""
 
 
-COMMIT_MESSAGE_TEMPLATE = """Based on this documentation snippet, generate a natural-sounding git commit message.
+DEFAULT_COMMIT_MESSAGE_TEMPLATE = """Based on this documentation snippet, generate a natural-sounding git commit message.
 
 Documentation:
 {documentation}
@@ -68,13 +69,13 @@ Generate a commit message that:
 Return ONLY the commit message, nothing else."""
 
 
-LANGUAGE_HINTS: dict[Language, str] = {
-    Language.PYTHON: "Focus on Pythonic patterns, type hints, decorators, and context managers",
-    Language.TYPESCRIPT: "Note TypeScript-specific types, generics, and async patterns",
-    Language.TSX: "Cover React component patterns, hooks usage, and prop types",
-    Language.JAVASCRIPT: "Highlight async/await patterns, closures, and module patterns",
-    Language.GO: "Emphasize Go idioms like error handling, goroutines, and interfaces",
-    Language.RUST: "Focus on ownership, borrowing, lifetimes, and Result/Option patterns",
+DEFAULT_LANGUAGE_HINTS: dict[str, str] = {
+    "python": "Focus on Pythonic patterns, type hints, decorators, and context managers",
+    "typescript": "Note TypeScript-specific types, generics, and async patterns",
+    "tsx": "Cover React component patterns, hooks usage, and prop types",
+    "javascript": "Highlight async/await patterns, closures, and module patterns",
+    "go": "Emphasize Go idioms like error handling, goroutines, and interfaces",
+    "rust": "Focus on ownership, borrowing, lifetimes, and Result/Option patterns",
 }
 
 
@@ -98,21 +99,56 @@ class PromptContext:
 class PromptBuilder:
     """
     Builds prompts for documentation generation
+    Loads templates from config or uses defaults
     """
-    def __init__(self, style: str = "technical") -> None:
+    def __init__(
+        self,
+        settings: PromptSettings | None = None,
+        style: str = "technical",
+    ) -> None:
         """
-        Initialize with documentation style
+        Initialize with optional settings from config
         """
         self.style = style
+        self._settings = settings
 
-    def build_documentation_prompt(self, context: PromptContext) -> tuple[str, str]:
+        if settings and settings.system_prompt:
+            self._system_prompt = settings.system_prompt
+        else:
+            self._system_prompt = DEFAULT_SYSTEM_PROMPT
+
+        if settings and settings.documentation_template:
+            self._doc_template = settings.documentation_template
+        else:
+            self._doc_template = DEFAULT_DOCUMENTATION_TEMPLATE
+
+        if settings and settings.commit_message_template:
+            self._commit_template = settings.commit_message_template
+        else:
+            self._commit_template = DEFAULT_COMMIT_MESSAGE_TEMPLATE
+
+        if settings and settings.language_hints:
+            self._language_hints = settings.language_hints
+        else:
+            self._language_hints = DEFAULT_LANGUAGE_HINTS
+
+    def _get_language_hint(self, language: Language) -> str:
+        """
+        Get language-specific hint from config or defaults
+        """
+        return self._language_hints.get(language.value, "")
+
+    def build_documentation_prompt(
+        self,
+        context: PromptContext,
+    ) -> tuple[str, str]:
         """
         Build system and user prompts for documentation
         Returns (system_prompt, user_prompt)
         """
-        system = SYSTEM_PROMPT
+        system = self._system_prompt
 
-        lang_hint = LANGUAGE_HINTS.get(context.language, "")
+        lang_hint = self._get_language_hint(context.language)
         if lang_hint:
             system += f"\n\nLanguage-specific guidance: {lang_hint}"
 
@@ -120,7 +156,7 @@ class PromptBuilder:
         if context.class_name:
             display_name = f"{context.class_name}.{context.name}"
 
-        user = DOCUMENTATION_TEMPLATE.format(
+        user = self._doc_template.format(
             language=context.language.value,
             source=context.source,
             name=display_name,
@@ -151,7 +187,7 @@ class PromptBuilder:
         if context.class_name:
             display_name = f"{context.class_name}.{context.name}"
 
-        user = COMMIT_MESSAGE_TEMPLATE.format(
+        user = self._commit_template.format(
             documentation=documentation[:500],
             name=display_name,
             language=context.language.value,
@@ -179,19 +215,33 @@ class PromptBuilder:
         )
 
 
-def build_documentation_prompt(candidate: AnalysisCandidate) -> tuple[str, str]:
+def get_prompt_builder(settings: PromptSettings | None = None) -> PromptBuilder:
+    """
+    Get a prompt builder, optionally configured from settings
+    """
+    return PromptBuilder(settings=settings)
+
+
+def build_documentation_prompt(
+    candidate: AnalysisCandidate,
+    settings: PromptSettings | None = None,
+) -> tuple[str, str]:
     """
     Convenience function to build documentation prompt from candidate
     """
-    builder = PromptBuilder()
+    builder = PromptBuilder(settings=settings)
     context = PromptBuilder.from_candidate(candidate)
     return builder.build_documentation_prompt(context)
 
 
-def build_commit_prompt(documentation: str, candidate: AnalysisCandidate) -> tuple[str, str]:
+def build_commit_prompt(
+    documentation: str,
+    candidate: AnalysisCandidate,
+    settings: PromptSettings | None = None,
+) -> tuple[str, str]:
     """
     Convenience function to build commit message prompt
     """
-    builder = PromptBuilder()
+    builder = PromptBuilder(settings=settings)
     context = PromptBuilder.from_candidate(candidate)
     return builder.build_commit_message_prompt(documentation, context)

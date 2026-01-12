@@ -12,17 +12,18 @@ from typing import TYPE_CHECKING
 
 from codeworm.core import get_logger
 from codeworm.llm.client import (
-    OllamaClient, 
-    OllamaError,
+    OllamaClient,
 )
 from codeworm.llm.prompts import (
     PromptBuilder,
-    build_commit_prompt, 
+    build_commit_prompt,
     build_documentation_prompt,
 )
+
 if TYPE_CHECKING:
     from codeworm.analysis import AnalysisCandidate
-    from codeworm.core.config import OllamaSettings
+    from codeworm.core.config import OllamaSettings, PromptSettings
+
 
 logger = get_logger("generator")
 
@@ -82,47 +83,61 @@ class DocumentationGenerator:
     """
     Generates documentation for code snippets using LLM
     """
-    def __init__(self, client: OllamaClient) -> None:
+    def __init__(
+        self,
+        client: OllamaClient,
+        prompt_settings: PromptSettings | None = None,
+    ) -> None:
         """
-        Initialize generator with Ollama client
+        Initialize generator with Ollama client and optional prompt settings
         """
         self.client = client
-        self.prompt_builder = PromptBuilder()
+        self.prompt_settings = prompt_settings
+        self.prompt_builder = PromptBuilder(settings=prompt_settings)
 
-    async def generate(self, candidate: AnalysisCandidate) -> GeneratedDocumentation:
+    async def generate(
+        self,
+        candidate: AnalysisCandidate
+    ) -> GeneratedDocumentation:
         """
         Generate documentation for a candidate
         """
         start_time = datetime.now()
 
-        system, user = build_documentation_prompt(candidate)
+        system, user = build_documentation_prompt(candidate, self.prompt_settings)
         doc_result = await self.client.generate_with_retry(user, system)
         documentation = self._clean_documentation(doc_result.text)
 
-        system, user = build_commit_prompt(documentation, candidate)
-        commit_result = await self.client.generate(user, system, temperature=0.4)
+        system, user = build_commit_prompt(documentation, candidate, self.prompt_settings)
+        commit_result = await self.client.generate(
+            user,
+            system,
+            temperature = 0.4
+        )
         commit_message = self._clean_commit_message(commit_result.text)
 
-        generation_time = int((datetime.now() - start_time).total_seconds() * 1000)
+        generation_time = int(
+            (datetime.now() - start_time).total_seconds() * 1000
+        )
         total_tokens = doc_result.total_tokens + commit_result.total_tokens
 
         filename = self._generate_filename(candidate)
 
         logger.info(
             "documentation_generated",
-            function=candidate.snippet.display_name,
-            repo=candidate.snippet.repo,
-            tokens=total_tokens,
-            time_ms=generation_time,
+            function = candidate.snippet.display_name,
+            repo = candidate.snippet.repo,
+            tokens = total_tokens,
+            time_ms = generation_time,
         )
 
         return GeneratedDocumentation(
-            content=documentation,
-            commit_message=commit_message,
-            snippet_filename=filename,
-            generated_at=datetime.now(),
-            tokens_used=total_tokens,
-            generation_time_ms=generation_time,
+            content = documentation,
+            commit_message = commit_message,
+            snippet_filename = filename,
+            generated_at = datetime.now(),
+            tokens_used = total_tokens,
+            generation_time_ms = generation_time,
         )
 
     def _clean_documentation(self, text: str) -> str:
@@ -133,13 +148,15 @@ class DocumentationGenerator:
 
         if text.startswith("```"):
             lines = text.split("\n")
-            if lines[-1].strip() == "```":
-                lines = lines[1:-1]
-            else:
-                lines = lines[1:]
+            lines = lines[1:-1] if lines[-1].strip() == "```" else lines[1:]
             text = "\n".join(lines)
 
-        text = re.sub(r"^(Here is|Here's|The following|This is) .+?:\n+", "", text, flags=re.IGNORECASE)
+        text = re.sub(
+            r"^(Here is|Here's|The following|This is) .+?:\n+",
+            "",
+            text,
+            flags = re.IGNORECASE
+        )
 
         return text.strip()
 
@@ -154,10 +171,15 @@ class DocumentationGenerator:
         if "\n" in text:
             text = text.split("\n")[0]
 
-        text = re.sub(r"^(commit message:|message:)\s*", "", text, flags=re.IGNORECASE)
+        text = re.sub(
+            r"^(commit message:|message:)\s*",
+            "",
+            text,
+            flags = re.IGNORECASE
+        )
 
         if len(text) > 72:
-            text = text[:69] + "..."
+            text = text[: 69] + "..."
 
         return text.strip()
 
@@ -171,7 +193,7 @@ class DocumentationGenerator:
         name = name.strip("-")
 
         if len(name) > 40:
-            name = name[:40].rsplit("-", 1)[0]
+            name = name[: 40].rsplit("-", 1)[0]
 
         return f"{date_str}_{name}.md"
 

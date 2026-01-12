@@ -18,6 +18,7 @@ from codeworm.models import (
     RepoConfig,
 )
 
+
 __version__ = "0.1.0"
 __all__ = [
     "AnalysisResult",

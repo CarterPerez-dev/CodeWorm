@@ -8,7 +8,7 @@ import os
 import random
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pathspec
 from git import InvalidGitRepositoryError, Repo
@@ -46,7 +46,7 @@ class RepoStats:
     name: str
     path: Path
     total_files: int = 0
-    files_by_language: dict[Language, int] = field(default_factory=dict)
+    files_by_language: dict[Language, int] = field(default_factory = dict)
     total_size_bytes: int = 0
     is_git_repo: bool = False
     branch: str | None = None
@@ -56,7 +56,11 @@ class GitignoreFilter:
     """
     Filters files based on gitignore patterns
     """
-    def __init__(self, repo_root: Path, extra_patterns: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        repo_root: Path,
+        extra_patterns: list[str] | None = None
+    ) -> None:
         """
         Initialize filter with gitignore from repo root
         """
@@ -70,16 +74,18 @@ class GitignoreFilter:
         if extra_patterns:
             patterns.extend(extra_patterns)
 
-        patterns.extend([
-            ".git/",
-            "__pycache__/",
-            "*.pyc",
-            "node_modules/",
-            ".venv/",
-            "venv/",
-            ".env",
-            "*.egg-info/",
-        ])
+        patterns.extend(
+            [
+                ".git/",
+                "__pycache__/",
+                "*.pyc",
+                "node_modules/",
+                ".venv/",
+                "venv/",
+                ".env",
+                "*.egg-info/",
+            ]
+        )
 
         self.spec = pathspec.PathSpec.from_lines("gitwildmatch", patterns)
 
@@ -98,7 +104,7 @@ class RepoScanner:
     """
     Scans repositories to find code files for analysis
     """
-    DEFAULT_EXCLUDE = [
+    DEFAULT_EXCLUDE: ClassVar[list[str]] = [
         "**/test_*.py",
         "**/*_test.py",
         "**/*_test.go",
@@ -126,9 +132,18 @@ class RepoScanner:
         """
         Initialize scanner with file patterns
         """
-        self.include_patterns = include_patterns or ["**/*.py", "**/*.ts", "**/*.go", "**/*.rs", "**/*.js"]
+        self.include_patterns = include_patterns or [
+            "**/*.py",
+            "**/*.ts",
+            "**/*.go",
+            "**/*.rs",
+            "**/*.js"
+        ]
         self.exclude_patterns = exclude_patterns or self.DEFAULT_EXCLUDE
-        self._exclude_spec = pathspec.PathSpec.from_lines("gitwildmatch", self.exclude_patterns)
+        self._exclude_spec = pathspec.PathSpec.from_lines(
+            "gitwildmatch",
+            self.exclude_patterns
+        )
 
     def scan_repo(self, repo_path: Path, repo_name: str) -> Iterator[ScannedFile]:
         """
@@ -138,14 +153,16 @@ class RepoScanner:
             return
 
         gitignore_filter = GitignoreFilter(repo_path)
-        include_spec = pathspec.PathSpec.from_lines("gitwildmatch", self.include_patterns)
+        include_spec = pathspec.PathSpec.from_lines(
+            "gitwildmatch",
+            self.include_patterns
+        )
 
         for root, dirs, files in os.walk(repo_path):
             root_path = Path(root)
 
             dirs[:] = [
-                d for d in dirs
-                if not d.startswith(".")
+                d for d in dirs if not d.startswith(".")
                 and not gitignore_filter.is_ignored(root_path / d)
             ]
 
@@ -183,12 +200,12 @@ class RepoScanner:
                         continue
 
                     yield ScannedFile(
-                        path=file_path,
-                        language=language,
-                        repo_name=repo_name,
-                        relative_path=rel_path,
-                        size_bytes=stat.st_size,
-                        is_binary=False,
+                        path = file_path,
+                        language = language,
+                        repo_name = repo_name,
+                        relative_path = rel_path,
+                        size_bytes = stat.st_size,
+                        is_binary = False,
                     )
 
                 except (OSError, PermissionError):
@@ -199,11 +216,13 @@ class RepoScanner:
         Check if file appears to be binary
         """
         try:
-            with open(file_path, "rb") as f:
+            with file_path.open("rb") as f:
                 chunk = f.read(self.BINARY_CHECK_BYTES)
                 if b"\x00" in chunk:
                     return True
-                text_chars = sum(1 for b in chunk if 32 <= b <= 126 or b in (9, 10, 13))
+                text_chars = sum(
+                    1 for b in chunk if 32 <= b <= 126 or b in (9, 10, 13)
+                )
                 return text_chars / len(chunk) < 0.7 if chunk else False
         except Exception:
             return True
@@ -212,7 +231,7 @@ class RepoScanner:
         """
         Get statistics about a repository
         """
-        stats = RepoStats(name=repo_name, path=repo_path)
+        stats = RepoStats(name = repo_name, path = repo_path)
 
         try:
             git_repo = Repo(repo_path)
@@ -226,7 +245,9 @@ class RepoScanner:
             stats.total_size_bytes += scanned_file.size_bytes
 
             lang = scanned_file.language
-            stats.files_by_language[lang] = stats.files_by_language.get(lang, 0) + 1
+            stats.files_by_language[lang
+                                    ] = stats.files_by_language.get(lang,
+                                                                    0) + 1
 
         return stats
 
@@ -250,7 +271,7 @@ class WeightedRepoSelector:
         if not self.repos:
             return None
 
-        return random.choices(self.repos, weights=self._weights, k=1)[0]
+        return random.choices(self.repos, weights = self._weights, k = 1)[0]
 
     def select_multiple(self, count: int) -> list[RepoEntry]:
         """
@@ -259,14 +280,15 @@ class WeightedRepoSelector:
         if not self.repos:
             return []
 
-        return random.choices(self.repos, weights=self._weights, k=count)
+        return random.choices(self.repos, weights = self._weights, k = count)
 
 
 def scan_repositories(
     repos: list[RepoEntry],
     include_patterns: list[str] | None = None,
     exclude_patterns: list[str] | None = None,
-) -> Iterator[tuple[RepoEntry, ScannedFile]]:
+) -> Iterator[tuple[RepoEntry,
+                    ScannedFile]]:
     """
     Scan multiple repositories and yield files with their repo config
     """

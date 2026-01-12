@@ -40,7 +40,7 @@ class StateManager:
         Initialize state manager with database path
         """
         self.db_path = db_path
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.db_path.parent.mkdir(parents = True, exist_ok = True)
         self._init_db()
 
     def _init_db(self) -> None:
@@ -74,7 +74,8 @@ class StateManager:
         with self._get_conn() as conn:
             cursor = conn.execute(
                 "SELECT 1 FROM documented_snippets WHERE code_hash = ? LIMIT 1",
-                (code_hash,),
+                (code_hash,
+                 ),
             )
             return cursor.fetchone() is not None
 
@@ -90,20 +91,24 @@ class StateManager:
                 WHERE source_file = ? AND function_name = ? AND class_name IS ?
                 ORDER BY documented_at DESC LIMIT 1
                 """,
-                (str(snippet.file_path), snippet.function_name, snippet.class_name),
+                (
+                    str(snippet.file_path),
+                    snippet.function_name,
+                    snippet.class_name
+                ),
             )
             row = cursor.fetchone()
             if row:
                 return DocumentedSnippet(
-                    id=row["id"],
-                    source_repo=row["source_repo"],
-                    source_file=row["source_file"],
-                    function_name=row["function_name"],
-                    class_name=row["class_name"],
-                    code_hash=row["code_hash"],
-                    documented_at=datetime.fromisoformat(row["documented_at"]),
-                    snippet_path=row["snippet_path"],
-                    git_commit=row["git_commit"],
+                    id = row["id"],
+                    source_repo = row["source_repo"],
+                    source_file = row["source_file"],
+                    function_name = row["function_name"],
+                    class_name = row["class_name"],
+                    code_hash = row["code_hash"],
+                    documented_at = datetime.fromisoformat(row["documented_at"]),
+                    snippet_path = row["snippet_path"],
+                    git_commit = row["git_commit"],
                 )
             return None
 
@@ -122,7 +127,8 @@ class StateManager:
         with self._get_conn() as conn:
             cursor = conn.execute(
                 "SELECT 1 FROM documented_snippets WHERE code_hash = ? LIMIT 1",
-                (code_hash,),
+                (code_hash,
+                 ),
             )
             if cursor.fetchone():
                 return False
@@ -133,12 +139,17 @@ class StateManager:
                 WHERE source_file = ? AND function_name = ? AND class_name IS ?
                 ORDER BY documented_at DESC LIMIT 1
                 """,
-                (str(snippet.file_path), snippet.function_name, snippet.class_name),
+                (
+                    str(snippet.file_path),
+                    snippet.function_name,
+                    snippet.class_name
+                ),
             )
             row = cursor.fetchone()
             if row:
                 last_doc = datetime.fromisoformat(row["documented_at"])
-                if datetime.now() - last_doc < timedelta(days=redocument_after_days):
+                if datetime.now() - last_doc < timedelta(
+                        days = redocument_after_days):
                     return False
 
             return True
@@ -179,15 +190,15 @@ class StateManager:
             conn.commit()
 
         return DocumentedSnippet(
-            id=doc_id,
-            source_repo=snippet.repo,
-            source_file=str(snippet.file_path),
-            function_name=snippet.function_name,
-            class_name=snippet.class_name,
-            code_hash=code_hash,
-            documented_at=now,
-            snippet_path=snippet_path,
-            git_commit=git_commit,
+            id = doc_id,
+            source_repo = snippet.repo,
+            source_file = str(snippet.file_path),
+            function_name = snippet.function_name,
+            class_name = snippet.class_name,
+            code_hash = code_hash,
+            documented_at = now,
+            snippet_path = snippet_path,
+            git_commit = git_commit,
         )
 
     def get_stats(self) -> dict:
@@ -195,7 +206,8 @@ class StateManager:
         Get statistics about documented snippets
         """
         with self._get_conn() as conn:
-            total = conn.execute("SELECT COUNT(*) FROM documented_snippets").fetchone()[0]
+            total = conn.execute("SELECT COUNT(*) FROM documented_snippets"
+                                 ).fetchone()[0]
             by_repo = dict(
                 conn.execute(
                     "SELECT source_repo, COUNT(*) FROM documented_snippets GROUP BY source_repo"

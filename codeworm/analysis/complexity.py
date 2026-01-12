@@ -10,20 +10,24 @@ from typing import TYPE_CHECKING
 
 import lizard
 
+from codeworm.core import get_logger
 from codeworm.models import Language
+
+logger = get_logger("complexity")
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
-LANGUAGE_MAP: dict[Language, str] = {
-    Language.PYTHON: "python",
-    Language.TYPESCRIPT: "javascript",
-    Language.TSX: "javascript",
-    Language.JAVASCRIPT: "javascript",
-    Language.GO: "go",
-    Language.RUST: "rust",
-}
+LANGUAGE_MAP: dict[Language,
+                   str] = {
+                       Language.PYTHON: "python",
+                       Language.TYPESCRIPT: "javascript",
+                       Language.TSX: "javascript",
+                       Language.JAVASCRIPT: "javascript",
+                       Language.GO: "go",
+                       Language.RUST: "rust",
+                   }
 
 
 @dataclass
@@ -110,7 +114,8 @@ class ComplexityAnalyzer:
             Language.PYTHON: [".py"],
             Language.TYPESCRIPT: [".ts"],
             Language.TSX: [".tsx"],
-            Language.JAVASCRIPT: [".js", ".jsx"],
+            Language.JAVASCRIPT: [".js",
+                                  ".jsx"],
             Language.GO: [".go"],
             Language.RUST: [".rs"],
         }
@@ -118,7 +123,9 @@ class ComplexityAnalyzer:
             return ext_map.get(self.language, [])
         return [ext for exts in ext_map.values() for ext in exts]
 
-    def analyze_source(self, source: str, filename: str = "source.py") -> list[ComplexityMetrics]:
+    def analyze_source(self,
+                       source: str,
+                       filename: str = "source.py") -> list[ComplexityMetrics]:
         """
         Analyze complexity of source code string
         """
@@ -134,27 +141,29 @@ class ComplexityAnalyzer:
 
         if not functions:
             return FileComplexity(
-                file_path=file_path,
-                functions=[],
-                average_complexity=0.0,
-                total_nloc=analysis.nloc,
-                max_complexity=0,
-                num_functions=0,
+                file_path = file_path,
+                functions = [],
+                average_complexity = 0.0,
+                total_nloc = analysis.nloc,
+                max_complexity = 0,
+                num_functions = 0,
             )
 
         total_cc = sum(f.cyclomatic_complexity for f in functions)
         max_cc = max(f.cyclomatic_complexity for f in functions)
 
         return FileComplexity(
-            file_path=file_path,
-            functions=functions,
-            average_complexity=total_cc / len(functions),
-            total_nloc=analysis.nloc,
-            max_complexity=max_cc,
-            num_functions=len(functions),
+            file_path = file_path,
+            functions = functions,
+            average_complexity = total_cc / len(functions),
+            total_nloc = analysis.nloc,
+            max_complexity = max_cc,
+            num_functions = len(functions),
         )
 
-    def analyze_directory(self, directory: Path, recursive: bool = True) -> Iterator[FileComplexity]:
+    def analyze_directory(self,
+                          directory: Path,
+                          recursive: bool = True) -> Iterator[FileComplexity]:
         """
         Analyze all supported files in a directory
         """
@@ -164,7 +173,12 @@ class ComplexityAnalyzer:
                 if file_path.is_file():
                     try:
                         yield self.analyze_file(file_path)
-                    except Exception:
+                    except Exception as e:
+                        logger.debug(
+                            "file_analysis_failed",
+                            file=str(file_path),
+                            error=str(e)
+                        )
                         continue
 
     def _convert_functions(self, function_list: list) -> list[ComplexityMetrics]:
@@ -174,16 +188,22 @@ class ComplexityAnalyzer:
         results = []
         for func in function_list:
             metrics = ComplexityMetrics(
-                name=func.name,
-                cyclomatic_complexity=func.cyclomatic_complexity,
-                nloc=func.nloc,
-                token_count=func.token_count,
-                parameter_count=func.parameter_count,
-                start_line=func.start_line,
-                end_line=func.end_line,
-                max_nesting_depth=getattr(func, "max_nesting_depth", 0),
-                fan_in=getattr(func, "fan_in", 0),
-                fan_out=getattr(func, "fan_out", 0),
+                name = func.name,
+                cyclomatic_complexity = func.cyclomatic_complexity,
+                nloc = func.nloc,
+                token_count = func.token_count,
+                parameter_count = func.parameter_count,
+                start_line = func.start_line,
+                end_line = func.end_line,
+                max_nesting_depth = getattr(func,
+                                            "max_nesting_depth",
+                                            0),
+                fan_in = getattr(func,
+                                 "fan_in",
+                                 0),
+                fan_out = getattr(func,
+                                  "fan_out",
+                                  0),
             )
             results.append(metrics)
         return results
@@ -193,7 +213,8 @@ class ComplexityAnalyzer:
         directory: Path,
         min_complexity: int = 10,
         top_n: int = 20,
-    ) -> list[tuple[Path, ComplexityMetrics]]:
+    ) -> list[tuple[Path,
+                    ComplexityMetrics]]:
         """
         Find the most complex functions in a directory
         """
@@ -204,11 +225,15 @@ class ComplexityAnalyzer:
                 if func.cyclomatic_complexity >= min_complexity:
                     hotspots.append((file_complexity.file_path, func))
 
-        hotspots.sort(key=lambda x: x[1].cyclomatic_complexity, reverse=True)
-        return hotspots[:top_n]
+        hotspots.sort(key = lambda x: x[1].cyclomatic_complexity, reverse = True)
+        return hotspots[: top_n]
 
 
-def get_function_complexity(source: str, function_name: str, filename: str = "source.py") -> ComplexityMetrics | None:
+def get_function_complexity(
+    source: str,
+    function_name: str,
+    filename: str = "source.py"
+) -> ComplexityMetrics | None:
     """
     Get complexity metrics for a specific function in source code
     """

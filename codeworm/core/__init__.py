@@ -17,6 +17,7 @@ from codeworm.core.config import (
 from codeworm.core.logging import configure_logging, get_logger
 from codeworm.core.state import StateManager
 
+
 __all__ = [
     "AnalyzerSettings",
     "CodeWormSettings",

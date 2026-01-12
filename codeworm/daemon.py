@@ -23,8 +23,8 @@ from codeworm.core import (
 )
 from codeworm.git import DevLogRepository
 from codeworm.llm import (
-    DocumentationGenerator, 
-    OllamaClient, 
+    DocumentationGenerator,
+    OllamaClient,
     OllamaError,
 )
 from codeworm.scheduler import CodeWormScheduler
@@ -48,13 +48,13 @@ class CodeWormDaemon:
 
         self.state = StateManager(settings.db_path)
         self.devlog = DevLogRepository(
-            repo_path=settings.devlog.repo_path,
-            remote=settings.devlog.remote,
-            branch=settings.devlog.branch,
+            repo_path = settings.devlog.repo_path,
+            remote = settings.devlog.remote,
+            branch = settings.devlog.branch,
         )
         self.analyzer = CodeAnalyzer(
-            repos=settings.repos,
-            settings=settings.analyzer,
+            repos = settings.repos,
+            settings = settings.analyzer,
         )
         self.scheduler = CodeWormScheduler(settings.schedule)
         self._llm_client: OllamaClient | None = None
@@ -70,16 +70,16 @@ class CodeWormDaemon:
         signal.signal(signal.SIGINT, self._handle_shutdown)
         signal.signal(signal.SIGHUP, self._handle_reload)
 
-    def _handle_shutdown(self, signum: int, frame) -> None:
+    def _handle_shutdown(self, signum: int, _frame) -> None:
         """
         Handle shutdown signals gracefully
         """
         sig_name = signal.Signals(signum).name
-        self.logger.info("shutdown_signal_received", signal=sig_name)
+        self.logger.info("shutdown_signal_received", signal = sig_name)
         self.running = False
-        self.scheduler.stop(wait=False)
+        self.scheduler.stop(wait = False)
 
-    def _handle_reload(self, signum: int, frame) -> None:
+    def _handle_reload(self, _signum: int, _frame) -> None:
         """
         Handle SIGHUP for config reload
         """
@@ -94,9 +94,15 @@ class CodeWormDaemon:
 
             if await self._llm_client.health_check():
                 await self._llm_client.prewarm()
-                self.logger.info("llm_initialized", model=self.settings.ollama.model)
+                self.logger.info(
+                    "llm_initialized",
+                    model = self.settings.ollama.model
+                )
             else:
-                self.logger.warning("llm_not_available", url=self.settings.ollama.base_url)
+                self.logger.warning(
+                    "llm_not_available",
+                    url = self.settings.ollama.base_url
+                )
 
         return self._llm_client
 
@@ -128,9 +134,9 @@ class CodeWormDaemon:
         """
         self.logger.info(
             "daemon_starting",
-            repos=len(self.settings.repos),
-            devlog=str(self.settings.devlog.repo_path),
-            debug=self.settings.debug,
+            repos = len(self.settings.repos),
+            devlog = str(self.settings.devlog.repo_path),
+            debug = self.settings.debug,
         )
 
         ParserManager.initialize()
@@ -139,8 +145,8 @@ class CodeWormDaemon:
         stats = self.state.get_stats()
         self.logger.info(
             "state_loaded",
-            total_documented=stats["total_documented"],
-            last_7_days=stats["last_7_days"],
+            total_documented = stats["total_documented"],
+            last_7_days = stats["last_7_days"],
         )
 
         await self._init_llm()
@@ -150,7 +156,7 @@ class CodeWormDaemon:
 
         next_run = self.scheduler.get_next_run_time()
         if next_run:
-            self.logger.info("next_scheduled_run", time=next_run.isoformat())
+            self.logger.info("next_scheduled_run", time = next_run.isoformat())
 
         while self.running:
             await asyncio.sleep(1)
@@ -167,9 +173,9 @@ class CodeWormDaemon:
                 self._loop,
             )
             try:
-                future.result(timeout=300)
+                future.result(timeout = 300)
             except Exception as e:
-                self.logger.exception("scheduled_task_error", error=str(e))
+                self.logger.exception("scheduled_task_error", error = str(e))
 
     async def _execute_documentation_cycle(self) -> None:
         """
@@ -178,8 +184,8 @@ class CodeWormDaemon:
         self.logger.info("cycle_starting")
 
         candidates = self.analyzer.select_for_documentation(
-            min_score=self.settings.analyzer.min_complexity * 10,
-            count=1,
+            min_score = self.settings.analyzer.min_complexity * 10,
+            count = 1,
         )
 
         if not candidates:
@@ -191,7 +197,7 @@ class CodeWormDaemon:
         if not self.state.should_document(candidate.snippet):
             self.logger.info(
                 "skipping_already_documented",
-                function=candidate.snippet.display_name,
+                function = candidate.snippet.display_name,
             )
             return
 
@@ -203,61 +209,62 @@ class CodeWormDaemon:
         """
         self.logger.info(
             "documenting",
-            function=candidate.snippet.display_name,
-            repo=candidate.snippet.repo,
-            score=round(candidate.score, 2),
+            function = candidate.snippet.display_name,
+            repo = candidate.snippet.repo,
+            score = round(candidate.score,
+                          2),
         )
 
         try:
             client = await self._init_llm()
-            generator = DocumentationGenerator(client)
+            generator = DocumentationGenerator(client, self.settings.prompts)
             doc = await generator.generate(candidate)
 
             markdown_content = doc.to_markdown(candidate)
 
             file_path = self.devlog.write_snippet(
-                content=markdown_content,
-                filename=doc.snippet_filename,
-                language=candidate.snippet.language.value,
+                content = markdown_content,
+                filename = doc.snippet_filename,
+                language = candidate.snippet.language.value,
             )
 
             result = self.devlog.commit(
-                message=doc.commit_message,
-                files=[file_path],
+                message = doc.commit_message,
+                files = [file_path],
             )
 
             self.state.record_documentation(
-                snippet=candidate.snippet,
-                snippet_path=str(file_path.relative_to(self.devlog.repo_path)),
-                git_commit=result.commit_hash,
+                snippet = candidate.snippet,
+                snippet_path = str(file_path.relative_to(self.devlog.repo_path)),
+                git_commit = result.commit_hash,
             )
 
             self.logger.info(
                 "documentation_committed",
-                function=candidate.snippet.display_name,
-                commit=result.commit_hash,
-                tokens=doc.tokens_used,
-                time_ms=doc.generation_time_ms,
+                function = candidate.snippet.display_name,
+                commit = result.commit_hash,
+                tokens = doc.tokens_used,
+                time_ms = doc.generation_time_ms,
             )
 
             if self.settings.devlog.remote:
                 try:
                     self.devlog.push()
                 except Exception as e:
-                    self.logger.warning("push_failed", error=str(e))
+                    self.logger.warning("push_failed", error = str(e))
 
         except OllamaError as e:
             self.logger.error(
                 "llm_error",
-                function=candidate.snippet.display_name,
-                error=str(e),
+                function = candidate.snippet.display_name,
+                error = str(e),
             )
 
         except Exception as e:
             self.logger.exception(
                 "documentation_failed",
-                function=candidate.snippet.display_name,
-                error=str(e),
+                function = candidate.snippet.display_name,
+                error = str(e),
             )
 
     async def run_once(self) -> bool:
@@ -269,7 +276,7 @@ class CodeWormDaemon:
         self.devlog.ensure_directory_structure()
         await self._init_llm()
 
-        candidates = self.analyzer.select_for_documentation(count=1)
+        candidates = self.analyzer.select_for_documentation(count = 1)
         if not candidates:
             return False
 
@@ -286,9 +293,9 @@ def main() -> int:
     Entry point for the daemon
     """
     settings = load_settings(
-        devlog={"repo_path": Path("/tmp/devlog")},
+        devlog = {"repo_path": Path("/tmp/devlog")},
     )
-    configure_logging(debug=settings.debug)
+    configure_logging(debug = settings.debug)
 
     daemon = CodeWormDaemon(settings)
     daemon.run()
