@@ -2,7 +2,6 @@
 
 debug: false
 
-# Data directory for SQLite database and runtime files
 data_dir: data
 
 devlog:
@@ -17,7 +16,6 @@ ollama:
   temperature: 0.3
   num_ctx: 16384
   num_predict: 4096
-  # Keep model loaded (-1 = forever, 0 = unload after each request)
   keep_alive: "-1"
 
   enabled: true
@@ -46,6 +44,7 @@ analyzer:
     - "**/*_test.go"
     - "**/*.spec.ts"
     - "**/*.test.ts"
+    - "**/*.json"
     - "**/node_modules/**"
     - "**/venv/**"
     - "**/.venv/**"
