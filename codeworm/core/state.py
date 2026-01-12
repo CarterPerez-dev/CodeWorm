@@ -35,7 +35,6 @@ class StateManager:
     Manages persistent state in SQLite
     This is the daemon's memory - tracks what has been documented
     """
-
     def __init__(self, db_path: Path) -> None:
         """
         Initialize state manager with database path

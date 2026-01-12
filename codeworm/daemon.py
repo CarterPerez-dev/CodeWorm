@@ -10,7 +10,10 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from codeworm.analysis import CodeAnalyzer, ParserManager
+from codeworm.analysis import (
+    CodeAnalyzer,
+    ParserManager,
+)
 from codeworm.core import (
     CodeWormSettings,
     StateManager,
@@ -19,7 +22,11 @@ from codeworm.core import (
     load_settings,
 )
 from codeworm.git import DevLogRepository
-from codeworm.llm import DocumentationGenerator, OllamaClient, OllamaError
+from codeworm.llm import (
+    DocumentationGenerator, 
+    OllamaClient, 
+    OllamaError,
+)
 from codeworm.scheduler import CodeWormScheduler
 
 if TYPE_CHECKING:
@@ -31,7 +38,6 @@ class CodeWormDaemon:
     Main daemon orchestrator
     Coordinates analysis, LLM generation, git commits, and scheduling
     """
-
     def __init__(self, settings: CodeWormSettings) -> None:
         """
         Initialize daemon with all components

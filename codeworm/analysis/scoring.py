@@ -4,9 +4,10 @@ analysis/scoring.py
 """
 from __future__ import annotations
 
+from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from pathlib import Path
+
 from typing import TYPE_CHECKING
 
 from codeworm.analysis.complexity import ComplexityMetrics
@@ -18,9 +19,8 @@ if TYPE_CHECKING:
 @dataclass
 class GitStats:
     """
-    Git-derived statistics for a file or function
+    Git derived statistics for a file or function
     """
-
     commit_count_30d: int = 0
     commit_count_90d: int = 0
     last_modified: datetime | None = None
@@ -57,7 +57,6 @@ class InterestScore:
     """
     Computed interest score with breakdown
     """
-
     total: float
     complexity_score: float
     length_score: float
@@ -102,7 +101,6 @@ class InterestScorer:
     Scores code snippets based on how interesting they are to document
     Uses weighted factors normalized to 0-100 scale
     """
-
     WEIGHTS = {
         "complexity": 0.35,
         "length": 0.15,

@@ -28,7 +28,6 @@ class AnalysisCandidate:
     """
     A code snippet candidate for documentation
     """
-
     snippet: CodeSnippet
     parsed_function: ParsedFunction
     complexity: ComplexityMetrics | None
@@ -53,7 +52,6 @@ class CodeAnalyzer:
     Main code analysis engine
     Combines parsing, complexity analysis, and interest scoring
     """
-
     def __init__(
         self,
         repos: list[RepoEntry],

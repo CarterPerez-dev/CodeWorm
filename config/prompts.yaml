@@ -1,0 +1,74 @@
+# CodeWorm Prompt Templates
+# Customize how the LLM generates documentation
+
+# Documentation style: technical, casual, or detailed
+style: technical
+
+# System prompt - sets the LLM's persona and rules
+system_prompt: |
+  You are a technical documentation writer analyzing code snippets.
+
+  Your task is to write clear, concise documentation that explains:
+  - What the code does (the "what")
+  - Why it matters or when to use it (the "why")
+  - Any notable patterns, trade-offs, or gotchas
+
+  Rules:
+  1. Only reference code that exists in the provided snippet
+  2. Do not invent or assume external functionality
+  3. Be specific - mention actual variable/function names
+  4. Keep explanations under 200 words
+  5. Use markdown formatting
+  6. Focus on practical understanding, not line-by-line description
+
+# Main documentation template
+# Available variables: {language}, {source}, {name}, {file_path}, {repo}, {complexity}, {line_count}
+documentation_template: |
+  Analyze and document this {language} code:
+
+  ```{language}
+  {source}
+  ```
+
+  Context:
+  - Function/Class: {name}
+  - File: {file_path}
+  - Repository: {repo}
+  - Complexity: {complexity} (cyclomatic)
+  - Lines: {line_count}
+
+  Write technical documentation (100-200 words) covering:
+  1. Purpose and behavior
+  2. Key implementation details
+  3. When/why to use this code
+  4. Any patterns or gotchas worth noting
+
+# Commit message generation template
+# Available variables: {documentation}, {name}, {language}, {repo}
+commit_message_template: |
+  Based on this documentation snippet, generate a natural-sounding git commit message.
+
+  Documentation:
+  {documentation}
+
+  Code context:
+  - Function: {name}
+  - Language: {language}
+  - Repository: {repo}
+
+  Generate a commit message that:
+  - Starts with a verb (Document, Add, Analyze, etc)
+  - Is under 72 characters
+  - Sounds natural, not robotic
+  - Mentions the function/concept name
+
+  Return ONLY the commit message, nothing else.
+
+# Language-specific hints appended to system prompt
+language_hints:
+  python: "Focus on Pythonic patterns, type hints, decorators, and context managers"
+  typescript: "Note TypeScript-specific types, generics, and async patterns"
+  tsx: "Cover React component patterns, hooks usage, and prop types"
+  javascript: "Highlight async/await patterns, closures, and module patterns"
+  go: "Emphasize Go idioms like error handling, goroutines, and interfaces"
+  rust: "Focus on ownership, borrowing, lifetimes, and Result/Option patterns"

@@ -26,7 +26,6 @@ class ScannedFile:
     """
     A file discovered during repository scanning
     """
-
     path: Path
     language: Language
     repo_name: str
@@ -44,7 +43,6 @@ class RepoStats:
     """
     Statistics about a scanned repository
     """
-
     name: str
     path: Path
     total_files: int = 0
@@ -58,7 +56,6 @@ class GitignoreFilter:
     """
     Filters files based on gitignore patterns
     """
-
     def __init__(self, repo_root: Path, extra_patterns: list[str] | None = None) -> None:
         """
         Initialize filter with gitignore from repo root
@@ -101,7 +98,6 @@ class RepoScanner:
     """
     Scans repositories to find code files for analysis
     """
-
     DEFAULT_EXCLUDE = [
         "**/test_*.py",
         "**/*_test.py",
@@ -239,7 +235,6 @@ class WeightedRepoSelector:
     """
     Selects repositories based on configured weights
     """
-
     def __init__(self, repos: list[RepoEntry]) -> None:
         """
         Initialize with list of repo configurations

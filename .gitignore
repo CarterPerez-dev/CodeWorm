@@ -36,3 +36,6 @@ data/*.sqlite
 
 .DS_Store
 Thumbs.db
+
+*.kate-swp
+.*.kate-swp

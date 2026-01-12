@@ -54,7 +54,6 @@ class ScheduledTask:
     """
     A task scheduled for execution
     """
-
     scheduled_time: datetime
     task_id: str
     task_type: str
@@ -68,7 +67,6 @@ class DailySchedule:
     """
     Schedule of tasks for a single day
     """
-
     date: datetime
     tasks: list[ScheduledTask] = field(default_factory=list)
     target_commits: int = 0
@@ -86,7 +84,6 @@ class HumanLikeTrigger(BaseTrigger):
     """
     APScheduler trigger that generates human-like scheduling patterns
     """
-
     def __init__(
         self,
         min_commits: int = 12,
@@ -215,7 +212,6 @@ class CodeWormScheduler:
     """
     Manages scheduling of documentation tasks
     """
-
     def __init__(self, settings: ScheduleSettings) -> None:
         """
         Initialize scheduler with settings

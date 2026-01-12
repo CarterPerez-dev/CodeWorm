@@ -1,0 +1,57 @@
+# CodeWorm Configuration
+
+debug: false
+
+# Data directory for SQLite database and runtime files
+data_dir: data
+
+devlog:
+  repo_path: ~/DevLog
+  remote: origin
+  branch: main
+
+ollama:
+  host: localhost
+  port: 11434
+  model: qwen2.5:7b
+  temperature: 0.3
+  num_ctx: 16384
+  num_predict: 4096
+  # Keep model loaded (-1 = forever, 0 = unload after each request)
+  keep_alive: "-1"
+
+  enabled: true
+  min_commits_per_day: 12
+  max_commits_per_day: 18
+  timezone: America/Los_Angeles
+  prefer_hours: [9, 10, 11, 14, 15, 16, 20, 21, 22]
+  avoid_hours: [3, 4, 5, 6, 7]
+  weekend_reduction: 0.7
+  min_gap_minutes: 30
+
+analyzer:
+  min_complexity: 3
+  min_lines: 15
+  max_lines: 150
+  include_patterns:
+    - "**/*.py"
+    - "**/*.ts"
+    - "**/*.tsx"
+    - "**/*.js"
+    - "**/*.go"
+    - "**/*.rs"
+  exclude_patterns:
+    - "**/test_*.py"
+    - "**/*_test.py"
+    - "**/*_test.go"
+    - "**/*.spec.ts"
+    - "**/*.test.ts"
+    - "**/node_modules/**"
+    - "**/venv/**"
+    - "**/.venv/**"
+    - "**/__pycache__/**"
+    - "**/dist/**"
+    - "**/build/**"
+    - "**/.git/**"
+    - "**/vendor/**"
+    - "**/target/**"

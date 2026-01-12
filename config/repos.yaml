@@ -1,0 +1,55 @@
+# CodeWorm Repository Configuration
+# Define which repositories to scan and their relative weights
+
+# Repositories to analyze
+# - name: Display name for the repo
+# - path: Absolute path to the repository
+# - weight: Priority weight 1-10 (higher = more likely to be selected)
+# - enabled: Whether to include this repo in analysis
+
+repositories:
+
+  - name: Cybersecurity-Projects
+    path: ~/dev/Cybersecurity-Projects
+    weight: 8
+    enabled: true
+
+  - name: CertGames-Core
+    path: ~/dev/CertGames-Core
+    weight: 8
+    enabled: true
+
+  - name: fullstack-template
+    path: ~/dev/templates
+    weight: 8
+    enabled: true
+
+  - name: angelamos-operations
+    path: ~/dev/operations/angelamos-operations
+    weight: 7
+    enabled: true
+
+  - name: kill-pr0cess.inc
+    path: ~/dev/CURRENT/kill-process/kill-pr0cess.inc
+    weight: 6
+    enabled: true
+
+  - name: oneIsNun_
+    path: ~/dev/CURRENT/oneIsNun_
+    weight: 6
+    enabled: true
+
+  - name: fastapi-rc
+    path: ~/dev/CURRENT/COMPLETED/redis-cache
+    weight: 5
+    enabled: false
+
+  - name: my-portfolio
+    path: ~/dev/CURRENT/portfolio
+    weight: 5
+    enabled: true
+
+  - name: stripe-referral
+    path: ~/dev/CURRENT/COMPLETED
+    weight: 4
+    enabled: true
