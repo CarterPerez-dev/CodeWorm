@@ -50,6 +50,6 @@ repositories:
     enabled: true
 
   - name: stripe-referral
-    path: ~/dev/CURRENT/COMPLETED
+    path: ~/dev/CURRENT/COMPLETED/stripe-referral
     weight: 4
     enabled: true

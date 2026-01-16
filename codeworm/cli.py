@@ -48,8 +48,13 @@ def cli(ctx: click.Context, debug: bool, config: Path | None) -> None:
     multiple=True,
     help="Add repo as NAME PATH pairs (overrides config)",
 )
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Generate docs but don't commit (for testing)",
+)
 @click.pass_context
-def run(ctx: click.Context, devlog: Path | None, repo: tuple) -> None:
+def run(ctx: click.Context, devlog: Path | None, repo: tuple, dry_run: bool) -> None:
     """
     Run the CodeWorm daemon with scheduler
     """
@@ -72,11 +77,13 @@ def run(ctx: click.Context, devlog: Path | None, repo: tuple) -> None:
         console.print("Add repos to config/repos.yaml or use --repo NAME PATH")
         raise SystemExit(1)
 
-    console.print("[bold green]Starting CodeWorm[/bold green]")
+    mode = "[yellow][DRY RUN][/yellow] " if dry_run else ""
+    console.print(f"{mode}[bold green]Starting CodeWorm[/bold green]")
     console.print(f"  DevLog: {settings.devlog.repo_path}")
     console.print(f"  Repos: {len(settings.repos)}")
+    console.print(f"  Ollama: {settings.ollama.base_url}")
 
-    daemon = CodeWormDaemon(settings)
+    daemon = CodeWormDaemon(settings, dry_run=dry_run)
     daemon.run()
 
 
@@ -92,8 +99,13 @@ def run(ctx: click.Context, devlog: Path | None, repo: tuple) -> None:
     multiple=True,
     help="Add repo as NAME PATH pairs (overrides config)",
 )
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Generate docs but don't commit (for testing)",
+)
 @click.pass_context
-def run_once(ctx: click.Context, devlog: Path | None, repo: tuple) -> None:
+def run_once(ctx: click.Context, devlog: Path | None, repo: tuple, dry_run: bool) -> None:
     """
     Run a single documentation cycle then exit
     """
@@ -116,12 +128,13 @@ def run_once(ctx: click.Context, devlog: Path | None, repo: tuple) -> None:
         console.print("Add repos to config/repos.yaml or use --repo NAME PATH")
         raise SystemExit(1)
 
-    console.print("[bold]Running single documentation cycle...[/bold]")
+    mode = "[yellow][DRY RUN][/yellow] " if dry_run else ""
+    console.print(f"{mode}[bold]Running single documentation cycle...[/bold]")
     console.print(f"  DevLog: {settings.devlog.repo_path}")
     console.print(f"  Repos: {[r.name for r in settings.repos]}")
 
     daemon = CodeWormDaemon(settings)
-    result = asyncio.run(daemon.run_once())
+    result = asyncio.run(daemon.run_once(dry_run=dry_run))
 
     if result:
         console.print("[green]Documentation generated successfully[/green]")

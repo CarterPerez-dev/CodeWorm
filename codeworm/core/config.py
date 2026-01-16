@@ -45,7 +45,7 @@ class OllamaSettings(BaseModel):
     temperature: float = 0.3
     num_ctx: int = 16384
     num_predict: int = 4096
-    keep_alive: str = "-1"
+    keep_alive: int = -1
 
     @property
     def base_url(self) -> str:
