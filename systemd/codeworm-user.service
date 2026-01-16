@@ -1,0 +1,15 @@
+[Unit]
+Description=CodeWorm Autonomous Code Documentation Agent (User)
+Documentation=https://github.com/CarterPerez-dev/CodeWorm
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/codeworm run
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10s
+Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin"
+
+[Install]
+WantedBy=default.target

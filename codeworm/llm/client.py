@@ -166,6 +166,7 @@ class OllamaClient:
             "model": self.settings.model,
             "prompt": prompt,
             "stream": False,
+            "keep_alive": self.settings.keep_alive,
             "options": options,
         }
 
@@ -255,7 +256,7 @@ class OllamaClient:
                 "/api/generate",
                 json = {
                     "model": self.settings.model,
-                    "keep_alive": "0",
+                    "keep_alive": 0,
                 },
             )
 

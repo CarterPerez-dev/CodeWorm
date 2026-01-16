@@ -225,7 +225,7 @@ class CodeAnalyzer:
         count: int = 1,
     ) -> list[AnalysisCandidate]:
         """
-        Select top candidates for documentation using weighted random
+        Select candidates for documentation using weighted random without replacement
         """
         selected_repo = self.repo_selector.select()
         if not selected_repo:
@@ -238,10 +238,19 @@ class CodeAnalyzer:
             return []
 
         if count >= len(eligible):
+            random.shuffle(eligible)
             return eligible
 
-        weights = [c.score for c in eligible]
-        selected = random.choices(eligible, weights = weights, k = count)
+        selected: list[AnalysisCandidate] = []
+        remaining = list(eligible)
+
+        for _ in range(count):
+            if not remaining:
+                break
+            weights = [c.score for c in remaining]
+            chosen = random.choices(remaining, weights = weights, k = 1)[0]
+            selected.append(chosen)
+            remaining.remove(chosen)
 
         return selected
 

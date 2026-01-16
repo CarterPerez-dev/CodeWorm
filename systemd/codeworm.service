@@ -2,9 +2,9 @@
 Description=CodeWorm Autonomous Code Documentation Agent
 Documentation=https://github.com/CarterPerez-dev/CodeWorm
 After=network-online.target ollama.service
-Wants=network-online.target
+Wants=network-online.target ollama.service
 StartLimitIntervalSec=3600
-StartLimitBurst=10
+StartLimitBurst=20
 
 [Service]
 Type=simple
@@ -15,12 +15,12 @@ WorkingDirectory=/opt/codeworm
 ExecStart=/opt/codeworm/.venv/bin/codeworm run
 ExecReload=/bin/kill -HUP $MAINPID
 
-Restart=on-failure
-RestartSec=30s
-RestartSteps=5
+Restart=always
+RestartSec=10s
+RestartSteps=8
 RestartMaxDelaySec=5min
 
-TimeoutStartSec=60
+TimeoutStartSec=300
 TimeoutStopSec=90
 
 MemoryHigh=4G
