@@ -1,0 +1,128 @@
+# ©AngelaMos | 2026
+# dev.compose.yml
+# =============================================================================
+# Development compose - Nginx + Vite + Dashboard + Ollama + Redis
+# Uses .env.development (different ports than production)
+# =============================================================================
+
+name: ${APP_NAME:-codeworm}-dev
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: ${APP_NAME:-codeworm}-nginx-dev
+    ports:
+      - "${NGINX_HOST_PORT:-38492}:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/dev.nginx:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      dashboard:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    networks:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./dashboard/frontend
+      dockerfile: ../../infra/docker/vite.dev
+    container_name: ${APP_NAME:-codeworm}-frontend-dev
+    ports:
+      - "${VITE_HOST_PORT:-41857}:5173"
+    volumes:
+      - ./dashboard/frontend:/app
+      - frontend_modules:/app/node_modules
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-/api}
+      - VITE_APP_TITLE=${VITE_APP_TITLE:-CodeWorm Dashboard}
+    networks:
+      - frontend
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: infra/docker/dashboard.dev
+    container_name: ${APP_NAME:-codeworm}-dashboard-dev
+    ports:
+      - "${DASHBOARD_HOST_PORT:-53173}:8000"
+    volumes:
+      - ./dashboard:/app/dashboard
+      - ./codeworm:/app/codeworm
+      - ./config:/app/config:ro
+      - ./data:/data:ro
+      - dashboard_cache:/app/.venv
+    env_file:
+      - .env.development
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - REDIS_URL=redis://redis:6379
+      - CODEWORM_DB_PATH=/data/codeworm.db
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ${APP_NAME:-codeworm}-ollama-dev
+    ports:
+      - "${OLLAMA_HOST_PORT:-47312}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ${APP_NAME:-codeworm}-redis-dev
+    ports:
+      - "${REDIS_HOST_PORT:-26850}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+
+volumes:
+  ollama_data:
+  redis_data:
+  dashboard_cache:
+  frontend_modules:

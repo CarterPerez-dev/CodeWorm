@@ -22,6 +22,23 @@ class Language(str, Enum):
     RUST = "rust"
 
 
+class DocType(str, Enum):
+    """
+    Types of documentation the daemon can generate
+    """
+    FUNCTION_DOC = "function_doc"
+    CLASS_DOC = "class_doc"
+    FILE_DOC = "file_doc"
+    MODULE_DOC = "module_doc"
+    SECURITY_REVIEW = "security_review"
+    PERFORMANCE_ANALYSIS = "performance_analysis"
+    TIL = "til"
+    CODE_EVOLUTION = "code_evolution"
+    PATTERN_ANALYSIS = "pattern_analysis"
+    WEEKLY_SUMMARY = "weekly_summary"
+    MONTHLY_SUMMARY = "monthly_summary"
+
+
 LANGUAGE_EXTENSIONS: dict[str,
                           Language] = {
                               ".py": Language.PYTHON,
@@ -69,6 +86,7 @@ class CodeSnippet(BaseModel):
     nesting_depth: int = 0
     parameter_count: int = 0
     interest_score: float = 0.0
+    doc_type: DocType = DocType.FUNCTION_DOC
 
     @property
     def display_name(self) -> str:
@@ -95,6 +113,7 @@ class DocumentedSnippet(BaseModel):
     documented_at: datetime
     snippet_path: str
     git_commit: str | None = None
+    doc_type: DocType = DocType.FUNCTION_DOC
 
     @property
     def display_name(self) -> str:

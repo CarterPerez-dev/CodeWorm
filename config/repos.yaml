@@ -26,7 +26,7 @@ repositories:
 
   - name: angelamos-operations
     path: ~/dev/operations/angelamos-operations
-    weight: 7
+    weight: 8
     enabled: true
 
   - name: kill-pr0cess.inc
@@ -42,7 +42,7 @@ repositories:
   - name: fastapi-rc
     path: ~/dev/CURRENT/COMPLETED/redis-cache
     weight: 5
-    enabled: false
+    enabled: true
 
   - name: my-portfolio
     path: ~/dev/CURRENT/portfolio
@@ -52,4 +52,54 @@ repositories:
   - name: stripe-referral
     path: ~/dev/CURRENT/COMPLETED/stripe-referral
     weight: 4
+    enabled: true
+
+  - name: trash-gui
+    path: ~/dev/CURRENT/trash-gui
+    weight: 6
+    enabled: true
+
+  - name: vuemantics
+    path: ~/dev/CURRENT/vuemantics
+    weight: 7
+    enabled: true
+
+  - name: ios-test
+    path: ~/dev/ios-test
+    weight: 5
+    enabled: true
+
+  - name: angela
+    path: ~/dev/CURRENT/angela
+    weight: 4
+    enabled: true
+
+  - name: timer-go
+    path: ~/dev/CURRENT/COMPLETED/timer-go
+    weight: 4
+    enabled: true
+
+  - name: docksec
+    path: ~/dev/CURRENT/COMPLETED/docksec
+    weight: 6
+    enabled: true
+
+  - name: pyproject-setup
+    path: ~/dev/CURRENT/COMPLETED/pyproject-setup
+    weight: 4
+    enabled: true
+
+  - name: social-media-notes
+    path: ~/dev/CURRENT/COMPLETED/social-media-notes
+    weight: 3
+    enabled: true
+
+  - name: angelamos-3d
+    path: ~/dev/CURRENT/angelamos-3d
+    weight: 7
+    enabled: true
+
+  - name: CodeWorm
+    path: ~/dev/github/CodeWorm
+    weight: 6
     enabled: true

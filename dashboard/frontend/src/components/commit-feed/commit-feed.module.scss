@@ -1,0 +1,115 @@
+// ©AngelaMos | 2026
+// commit-feed.module.scss
+
+@use '@/styles' as *;
+
+.container {
+  @include card;
+  @include flex-column;
+  height: 360px;
+  overflow: hidden;
+}
+
+.header {
+  @include flex-between;
+  padding: $space-3 $space-4;
+  border-bottom: 1px solid $border-default;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $text-default;
+}
+
+.count {
+  font-size: $font-size-xs;
+  color: $text-lighter;
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  @include hide-scrollbar;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-3;
+  padding: $space-3 $space-4;
+  border-bottom: 1px solid $border-muted;
+  @include transition-fast;
+
+  @include hover {
+    background: hsl(0, 0%, 9.2%);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: $radius-full;
+  background: $primary;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.itemBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemTop {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  margin-bottom: $space-1;
+}
+
+.funcName {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $text-default;
+  font-family: $font-mono;
+  @include truncate;
+}
+
+.docType {
+  font-size: $font-size-3xs;
+  font-weight: $font-weight-medium;
+  padding: $space-0-5 $space-1-5;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  background: hsl(263 70% 50% / 20%);
+  color: hsl(263, 70%, 70%);
+}
+
+.itemMeta {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  font-size: $font-size-xs;
+  color: $text-muted;
+}
+
+.repo {
+  @include truncate;
+  max-width: 150px;
+}
+
+.sep {
+  color: $text-muted;
+}
+
+.empty {
+  @include flex-center;
+  height: 100%;
+  color: $text-muted;
+  font-size: $font-size-sm;
+}

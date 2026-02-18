@@ -110,14 +110,15 @@ class InterestScorer:
     Scores code snippets based on how interesting they are to document
     Uses weighted factors normalized to 0-100 scale
     """
-    WEIGHTS: ClassVar[dict[str, float]] = {
-        "complexity": 0.35,
-        "length": 0.15,
-        "nesting": 0.15,
-        "parameters": 0.10,
-        "churn": 0.15,
-        "novelty": 0.10,
-    }
+    WEIGHTS: ClassVar[dict[str,
+                           float]] = {
+                               "complexity": 0.35,
+                               "length": 0.15,
+                               "nesting": 0.15,
+                               "parameters": 0.10,
+                               "churn": 0.15,
+                               "novelty": 0.10,
+                           }
 
     COMPLEXITY_CAP = 20
     LENGTH_CAP = 100
@@ -126,16 +127,17 @@ class InterestScorer:
     CHURN_CAP = 5
     NOVELTY_DAYS = 30
 
-    PATTERN_BONUSES: ClassVar[dict[str, int]] = {
-        "decorator": 5,
-        "async": 5,
-        "context_manager": 10,
-        "generator": 8,
-        "class_method": 3,
-        "property": 3,
-        "abstract": 8,
-        "dataclass": 7,
-    }
+    PATTERN_BONUSES: ClassVar[dict[str,
+                                   int]] = {
+                                       "decorator": 5,
+                                       "async": 5,
+                                       "context_manager": 10,
+                                       "generator": 8,
+                                       "class_method": 3,
+                                       "property": 3,
+                                       "abstract": 8,
+                                       "dataclass": 7,
+                                   }
 
     def __init__(self, git_repo: Repo | None = None) -> None:
         """

@@ -60,8 +60,8 @@ class ScheduleSettings(BaseModel):
     Settings for human-like commit scheduling
     """
     enabled: bool = True
-    min_commits_per_day: Annotated[int, Field(ge = 1, le = 50)] = 12
-    max_commits_per_day: Annotated[int, Field(ge = 1, le = 50)] = 18
+    min_commits_per_day: Annotated[int, Field(ge = 1, le = 500)] = 12
+    max_commits_per_day: Annotated[int, Field(ge = 1, le = 500)] = 18
     timezone: str = "America/Los_Angeles"
     prefer_hours: list[int] = Field(
         default_factory = lambda: [9, 10, 11, 14, 15, 16, 20, 21, 22]
@@ -99,6 +99,54 @@ class AnalyzerSettings(BaseModel):
             "**/vendor/**",
             "**/target/**",]
     )
+
+
+class DocumentationSettings(BaseModel):
+    """
+    Settings for documentation type distribution and deduplication
+    """
+    redocument_after_days: int = 90
+    type_weights: dict[str,
+                       int] = Field(
+                           default_factory = lambda: {
+                               "function_doc": 35,
+                               "class_doc": 12,
+                               "file_doc": 12,
+                               "security_review": 10,
+                               "performance_analysis": 8,
+                               "til": 10,
+                               "code_evolution": 5,
+                               "module_doc": 3,
+                               "pattern_analysis": 3,
+                               "weekly_summary": 1,
+                               "monthly_summary": 1,}
+                       )
+
+
+class RedisSettings(BaseModel):
+    """
+    Settings for Redis connection used by dashboard
+    """
+    enabled: bool = False
+    host: str = "localhost"
+    port: int = 6379
+    url: str = ""
+
+    @property
+    def connection_url(self) -> str:
+        if self.url:
+            return self.url
+        return f"redis://{self.host}:{self.port}"
+
+
+class DashboardSettings(BaseModel):
+    """
+    Settings for the web dashboard
+    """
+    enabled: bool = False
+    host: str = "0.0.0.0"
+    port: int = 8420
+    redis: RedisSettings = Field(default_factory = RedisSettings)
 
 
 class RepoEntry(BaseModel):
@@ -152,6 +200,10 @@ class CodeWormSettings(BaseSettings):
     ollama: OllamaSettings = Field(default_factory = OllamaSettings)
     schedule: ScheduleSettings = Field(default_factory = ScheduleSettings)
     analyzer: AnalyzerSettings = Field(default_factory = AnalyzerSettings)
+    documentation: DocumentationSettings = Field(
+        default_factory = DocumentationSettings
+    )
+    dashboard: DashboardSettings = Field(default_factory = DashboardSettings)
     repos: list[RepoEntry] = Field(default_factory = list)
     prompts: PromptSettings = Field(default_factory = PromptSettings)
     github_token: SecretStr | None = None

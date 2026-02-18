@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from codeworm.models import CodeSnippet, DocumentedSnippet
+from codeworm.models import CodeSnippet, DocType, DocumentedSnippet
 
 
 SCHEMA = """
@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS documented_snippets (
     code_hash TEXT NOT NULL,
     documented_at TIMESTAMP NOT NULL,
     snippet_path TEXT NOT NULL,
-    git_commit TEXT
+    git_commit TEXT,
+    doc_type TEXT NOT NULL DEFAULT 'function_doc'
 );
 
 CREATE INDEX IF NOT EXISTS idx_code_hash ON documented_snippets(code_hash);
@@ -45,11 +46,32 @@ class StateManager:
 
     def _init_db(self) -> None:
         """
-        Initialize database schema
+        Initialize database schema and run migrations
         """
         with sqlite3.connect(self.db_path) as conn:
             conn.executescript(SCHEMA)
+            self._migrate_add_doc_type(conn)
             conn.commit()
+
+    def _migrate_add_doc_type(self, conn: sqlite3.Connection) -> None:
+        """
+        Add doc_type column if it does not exist
+        """
+        cursor = conn.execute("PRAGMA table_info(documented_snippets)")
+        columns = {row[1] for row in cursor.fetchall()}
+        if "doc_type" not in columns:
+            conn.execute(
+                "ALTER TABLE documented_snippets "
+                "ADD COLUMN doc_type TEXT NOT NULL DEFAULT 'function_doc'"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_dedup "
+                "ON documented_snippets(source_file, function_name, class_name, doc_type)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_doc_type "
+                "ON documented_snippets(doc_type)"
+            )
 
     def _get_conn(self) -> sqlite3.Connection:
         """
@@ -115,20 +137,21 @@ class StateManager:
     def should_document(
         self,
         snippet: CodeSnippet,
-        redocument_after_days: int = 30,
+        doc_type: DocType = DocType.FUNCTION_DOC,
+        redocument_after_days: int = 90,
     ) -> bool:
         """
-        Determine if a snippet should be documented
-        Returns True if:
-        - Never documented before
-        - Code has changed AND enough time has passed
+        Determine if a snippet should be documented with a given doc_type
+        Deduplication is scoped to (entity + doc_type) so the same code
+        can have a function_doc, security_review, and TIL without conflict
         """
         code_hash = self.hash_code(snippet.source)
         with self._get_conn() as conn:
             cursor = conn.execute(
-                "SELECT 1 FROM documented_snippets WHERE code_hash = ? LIMIT 1",
+                "SELECT 1 FROM documented_snippets "
+                "WHERE code_hash = ? AND doc_type = ? LIMIT 1",
                 (code_hash,
-                 ),
+                 doc_type.value),
             )
             if cursor.fetchone():
                 return False
@@ -136,13 +159,15 @@ class StateManager:
             cursor = conn.execute(
                 """
                 SELECT documented_at FROM documented_snippets
-                WHERE source_file = ? AND function_name = ? AND class_name IS ?
+                WHERE source_file = ? AND function_name = ?
+                    AND class_name IS ? AND doc_type = ?
                 ORDER BY documented_at DESC LIMIT 1
                 """,
                 (
                     str(snippet.file_path),
                     snippet.function_name,
-                    snippet.class_name
+                    snippet.class_name,
+                    doc_type.value,
                 ),
             )
             row = cursor.fetchone()
@@ -159,9 +184,10 @@ class StateManager:
         snippet: CodeSnippet,
         snippet_path: str,
         git_commit: str | None = None,
+        doc_type: DocType = DocType.FUNCTION_DOC,
     ) -> DocumentedSnippet:
         """
-        Record that a snippet has been documented
+        Record that a snippet has been documented with a specific doc_type
         """
         doc_id = str(uuid.uuid4())
         code_hash = self.hash_code(snippet.source)
@@ -172,8 +198,8 @@ class StateManager:
                 """
                 INSERT INTO documented_snippets
                 (id, source_repo, source_file, function_name, class_name,
-                 code_hash, documented_at, snippet_path, git_commit)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 code_hash, documented_at, snippet_path, git_commit, doc_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     doc_id,
@@ -185,6 +211,7 @@ class StateManager:
                     now.isoformat(),
                     snippet_path,
                     git_commit,
+                    doc_type.value,
                 ),
             )
             conn.commit()
@@ -199,6 +226,7 @@ class StateManager:
             documented_at = now,
             snippet_path = snippet_path,
             git_commit = git_commit,
+            doc_type = doc_type,
         )
 
     def get_stats(self) -> dict:

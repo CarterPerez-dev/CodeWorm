@@ -1,0 +1,138 @@
+// ©AngelaMos | 2026
+// live-log.module.scss
+
+@use '@/styles' as *;
+
+.container {
+  @include card;
+  @include flex-column;
+  height: 360px;
+  overflow: hidden;
+}
+
+.header {
+  @include flex-between;
+  padding: $space-3 $space-4;
+  border-bottom: 1px solid $border-default;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $text-default;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.filterSelect {
+  background: $bg-input;
+  border: 1px solid $border-default;
+  border-radius: $radius-sm;
+  color: $text-light;
+  font-size: $font-size-xs;
+  padding: $space-1 $space-2;
+  outline: none;
+  @include transition-fast;
+
+  &:focus {
+    border-color: $border-strong;
+  }
+}
+
+.controlBtn {
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  border-radius: $radius-sm;
+  color: $text-lighter;
+  @include transition-fast;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  @include hover {
+    background: $bg-card-hover;
+    color: $text-default;
+  }
+
+  &.active {
+    color: $primary;
+  }
+}
+
+.logArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: $space-2 $space-3;
+  font-family: $font-mono;
+  font-size: $font-size-2xs;
+  line-height: $line-height-relaxed;
+  @include hide-scrollbar;
+}
+
+.logLine {
+  display: flex;
+  gap: $space-2;
+  padding: $space-0-5 0;
+
+  &:hover {
+    background: hsl(0, 0%, 9.2%);
+  }
+}
+
+.logTime {
+  color: $text-muted;
+  flex-shrink: 0;
+  width: 80px;
+}
+
+.logLevel {
+  flex-shrink: 0;
+  width: 44px;
+  font-weight: $font-weight-medium;
+  text-transform: uppercase;
+
+  &.debug {
+    color: $text-lighter;
+  }
+
+  &.info {
+    color: $primary;
+  }
+
+  &.warning {
+    color: $warning;
+  }
+
+  &.error {
+    color: $error;
+  }
+}
+
+.logComponent {
+  color: $accent;
+  flex-shrink: 0;
+  max-width: 100px;
+  @include truncate;
+}
+
+.logEvent {
+  color: $text-light;
+  flex: 1;
+  @include truncate;
+}
+
+.empty {
+  @include flex-center;
+  height: 100%;
+  color: $text-muted;
+  font-size: $font-size-sm;
+  font-family: $font-sans;
+}

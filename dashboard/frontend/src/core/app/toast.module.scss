@@ -1,0 +1,51 @@
+// ©AngelaMos | 2026
+// toast.module.scss
+
+@use '@/styles' as *;
+
+:global {
+  [data-sonner-toaster] {
+    --normal-bg: #{$bg-card};
+    --normal-border: #{$border-default};
+    --normal-text: #{$text-default};
+    --error-bg: #{$bg-card};
+    --error-border: #{$error};
+    --error-text: #{$text-default};
+    font-family: $font-sans;
+  }
+
+  [data-sonner-toast] {
+    border-radius: $radius-md;
+    padding: $space-3 $space-4;
+    font-size: $font-size-sm;
+    border: 1px solid $border-default;
+    background: $bg-card;
+    color: $text-default;
+
+    [data-title] {
+      font-weight: $font-weight-medium;
+    }
+
+    [data-description] {
+      color: $text-light;
+      font-size: $font-size-xs;
+    }
+
+    [data-close-button] {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      color: $text-muted;
+      @include transition-fast;
+
+      @include hover {
+        color: $text-default;
+      }
+    }
+  }
+
+  [data-sonner-toast][data-type='error'] {
+    border-color: $error;
+  }
+}

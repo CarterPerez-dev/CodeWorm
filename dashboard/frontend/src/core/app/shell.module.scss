@@ -1,0 +1,332 @@
+// ©AngelaMos | 2026
+// shell.module.scss
+
+@use '@/styles' as *;
+
+$sidebar-width: 240px;
+$sidebar-collapsed-width: 64px;
+$header-height: 56px;
+
+.shell {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: $sidebar-width;
+  background-color: $bg-surface;
+  background-image: radial-gradient(circle, $bg-surface-dot 1px, transparent 1px);
+  background-size: 17px 17px;
+  border-right: 1px solid $border-default;
+  display: flex;
+  flex-direction: column;
+  z-index: $z-fixed;
+  @include transition-fast;
+
+  &.collapsed {
+    width: $sidebar-collapsed-width;
+  }
+
+  @include breakpoint-down('sm') {
+    transform: translateX(-100%);
+
+    &.open {
+      transform: translateX(0);
+    }
+
+    &.collapsed {
+      width: $sidebar-width;
+    }
+  }
+}
+
+.sidebarHeader {
+  height: $header-height;
+  padding: 0 $space-3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid $border-default;
+
+  .sidebar.collapsed & {
+    justify-content: center;
+    padding: 0;
+  }
+}
+
+.logo {
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $text-default;
+  letter-spacing: $tracking-wide;
+  @include transition-fast;
+
+  .sidebar.collapsed & {
+    display: none;
+  }
+}
+
+.nav {
+  flex: 1;
+  padding: $space-3;
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-2 $space-3;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  color: $text-light;
+  @include transition-fast;
+
+  @include hover {
+    background: $bg-card-hover;
+    color: $text-default;
+  }
+
+  &.active {
+    background: $bg-selection;
+    color: $text-default;
+  }
+
+  .sidebar.collapsed & {
+    justify-content: center;
+  }
+}
+
+.navIcon {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  color: $primary;
+}
+
+.navLabel {
+  @include transition-fast;
+
+  .sidebar.collapsed & {
+    display: none;
+  }
+}
+
+.collapseBtn {
+  width: 45px;
+  height: 45px;
+  border-radius: $radius-md;
+  color: $primary;
+  @include flex-center;
+  @include transition-fast;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  @include hover {
+    background: $bg-card-hover;
+    color: $text-default;
+  }
+
+  @include breakpoint-down('sm') {
+    display: none;
+  }
+}
+
+.sidebarFooter {
+  padding: $space-3;
+  border-top: 1px solid $border-default;
+}
+
+.connectionStatus {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  font-size: $font-size-xs;
+  color: $text-lighter;
+
+  .sidebar.collapsed & {
+    justify-content: center;
+  }
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: $radius-full;
+  background: $error;
+  flex-shrink: 0;
+
+  &.connected {
+    background: $success;
+    box-shadow: 0 0 6px rgba($success, 0.5);
+  }
+}
+
+.statusText {
+  .sidebar.collapsed & {
+    display: none;
+  }
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: $bg-overlay;
+  z-index: calc($z-fixed - 1);
+  display: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+
+  @include breakpoint-down('sm') {
+    display: block;
+  }
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: $sidebar-width;
+  min-width: 0;
+  @include transition-fast;
+
+  &.collapsed {
+    margin-left: $sidebar-collapsed-width;
+  }
+
+  @include breakpoint-down('sm') {
+    margin-left: 0;
+
+    &.collapsed {
+      margin-left: 0;
+    }
+  }
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  height: $header-height;
+  background-color: $bg-surface;
+  background-image: radial-gradient(circle, $bg-surface-dot 1px, transparent 1px);
+  background-size: 17px 17px;
+  border-bottom: 1px solid $border-default;
+  z-index: $z-sticky;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 $space-4;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+}
+
+.menuBtn {
+  display: none;
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-md;
+  color: $text-light;
+  align-items: center;
+  justify-content: center;
+  @include transition-fast;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  @include hover {
+    background: $bg-card-hover;
+    color: $text-default;
+  }
+
+  @include breakpoint-down('sm') {
+    display: flex;
+  }
+}
+
+.pageTitle {
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: $text-default;
+  margin-left: 7px;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+}
+
+.liveBadge {
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-bold;
+  letter-spacing: $tracking-wide;
+  padding: $space-1 $space-2;
+  border-radius: $radius-full;
+  background: hsl(0 72% 51% / 20%);
+  color: $error;
+
+  &.connected {
+    background: hsl(142 76% 36% / 20%);
+    color: hsl(142, 76%, 46%);
+    animation: pulse 2s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: $space-6;
+  @include dot-pattern($bg-content, $bg-content-dot);
+}
+
+.loading {
+  @include flex-center;
+  height: 100%;
+  color: $text-muted;
+}
+
+.error {
+  @include flex-column-center;
+  height: 100%;
+  gap: $space-4;
+  padding: $space-6;
+  color: $error;
+
+  h2 {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+  }
+
+  pre {
+    font-family: $font-mono;
+    font-size: $font-size-sm;
+    padding: $space-4;
+    background: $bg-card;
+    border-radius: $radius-lg;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+}

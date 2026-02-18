@@ -1,0 +1,97 @@
+// ©AngelaMos | 2026
+// worm-viz.module.scss
+
+@use '@/styles' as *;
+
+.container {
+  @include card;
+  padding: $space-5;
+}
+
+.header {
+  @include flex-between;
+  margin-bottom: $space-4;
+}
+
+.title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $text-default;
+}
+
+.statusTag {
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-medium;
+  padding: $space-0-5 $space-2;
+  border-radius: $radius-full;
+  background: hsl(0, 0%, 14.1%);
+  color: $text-lighter;
+
+  &.active {
+    background: hsl(16 53% 50% / 20%);
+    color: $primary;
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: $space-3;
+}
+
+.node {
+  display: flex;
+  align-items: center;
+  gap: $space-2-5;
+  padding: $space-3;
+  background: hsl(0, 0%, 7.1%);
+  border: 1px solid $border-default;
+  border-radius: $radius-md;
+  @include transition-fast;
+
+  @include hover {
+    border-color: $border-strong;
+  }
+
+  &.activeNode {
+    border-color: rgba($primary, 0.4);
+    background: hsl(16 53% 50% / 5%);
+  }
+}
+
+.nodeDot {
+  width: 10px;
+  height: 10px;
+  border-radius: $radius-full;
+  background: $primary;
+  flex-shrink: 0;
+
+  .activeNode & {
+    background: $primary;
+    box-shadow: 0 0 8px rgba($primary, 0.5);
+    animation: glow 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 6px rgba($primary, 0.4); }
+  50% { box-shadow: 0 0 14px rgba($primary, 0.7); }
+}
+
+.nodeLabel {
+  font-size: $font-size-xs;
+  color: $text-light;
+  @include truncate;
+
+  .activeNode & {
+    color: $text-default;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.empty {
+  @include flex-center;
+  padding: $space-8 0;
+  color: $text-muted;
+  font-size: $font-size-sm;
+}

@@ -19,13 +19,30 @@ from codeworm.llm.prompts import (
     build_commit_prompt,
     build_documentation_prompt,
 )
+from codeworm.models import DocType
 
 if TYPE_CHECKING:
     from codeworm.analysis import AnalysisCandidate
+    from codeworm.analysis.targets import DocumentationTarget
     from codeworm.core.config import OllamaSettings, PromptSettings
 
 
 logger = get_logger("generator")
+
+DOC_TYPE_LABELS: dict[DocType,
+                      str] = {
+                          DocType.FUNCTION_DOC: "Documentation",
+                          DocType.CLASS_DOC: "Class Documentation",
+                          DocType.FILE_DOC: "File Overview",
+                          DocType.MODULE_DOC: "Module Overview",
+                          DocType.SECURITY_REVIEW: "Security Review",
+                          DocType.PERFORMANCE_ANALYSIS: "Performance Analysis",
+                          DocType.TIL: "Today I Learned",
+                          DocType.CODE_EVOLUTION: "Code Evolution",
+                          DocType.PATTERN_ANALYSIS: "Pattern Analysis",
+                          DocType.WEEKLY_SUMMARY: "Weekly Summary",
+                          DocType.MONTHLY_SUMMARY: "Monthly Summary",
+                      }
 
 
 @dataclass
@@ -39,6 +56,7 @@ class GeneratedDocumentation:
     generated_at: datetime
     tokens_used: int
     generation_time_ms: int
+    doc_type: DocType = DocType.FUNCTION_DOC
 
     @property
     def word_count(self) -> int:
@@ -46,29 +64,72 @@ class GeneratedDocumentation:
 
     def to_markdown(self, candidate: AnalysisCandidate) -> str:
         """
-        Format as markdown file content
+        Format as markdown file content for AnalysisCandidate (legacy)
         """
-        header = f"""# {candidate.snippet.display_name}
+        return self._format_markdown(
+            display_name = candidate.snippet.display_name,
+            repo = candidate.snippet.repo,
+            file_path = str(candidate.scanned_file.relative_path),
+            language = candidate.snippet.language.value,
+            start_line = candidate.snippet.start_line,
+            end_line = candidate.snippet.end_line,
+            complexity = candidate.snippet.complexity,
+            source = candidate.snippet.source,
+        )
 
-**Repository:** {candidate.snippet.repo}
-**File:** {candidate.scanned_file.relative_path}
-**Language:** {candidate.snippet.language.value}
-**Lines:** {candidate.snippet.start_line}-{candidate.snippet.end_line}
-**Complexity:** {candidate.snippet.complexity}
+    def to_markdown_from_target(self, target: DocumentationTarget) -> str:
+        """
+        Format as markdown file content for DocumentationTarget
+        """
+        return self._format_markdown(
+            display_name = target.display_name,
+            repo = target.snippet.repo,
+            file_path = target.metadata.get(
+                "relative_path",
+                str(target.snippet.file_path)
+            ),
+            language = target.snippet.language.value,
+            start_line = target.snippet.start_line,
+            end_line = target.snippet.end_line,
+            complexity = target.snippet.complexity,
+            source = target.source_context[: 3000],
+        )
+
+    def _format_markdown(
+        self,
+        display_name: str,
+        repo: str,
+        file_path: str,
+        language: str,
+        start_line: int,
+        end_line: int,
+        complexity: float,
+        source: str,
+    ) -> str:
+        label = DOC_TYPE_LABELS.get(self.doc_type, "Documentation")
+
+        header = f"""# {display_name}
+
+**Type:** {label}
+**Repository:** {repo}
+**File:** {file_path}
+**Language:** {language}
+**Lines:** {start_line}-{end_line}
+**Complexity:** {complexity}
 
 ---
 
 """
         code_block = f"""## Source Code
 
-```{candidate.snippet.language.value}
-{candidate.snippet.source}
+```{language}
+{source}
 ```
 
 ---
 
 """
-        doc_section = f"""## Documentation
+        doc_section = f"""## {label}
 
 {self.content}
 
@@ -93,7 +154,7 @@ class DocumentationGenerator:
         """
         self.client = client
         self.prompt_settings = prompt_settings
-        self.prompt_builder = PromptBuilder(settings=prompt_settings)
+        self.prompt_builder = PromptBuilder(settings = prompt_settings)
 
     async def generate(
         self,
@@ -140,6 +201,79 @@ class DocumentationGenerator:
             generation_time_ms = generation_time,
         )
 
+    async def generate_from_target(
+        self,
+        target: DocumentationTarget,
+    ) -> GeneratedDocumentation:
+        """
+        Generate documentation for a DocumentationTarget with any doc_type
+        """
+        start_time = datetime.now()
+
+        system, user = self.prompt_builder.build_target_prompt(target)
+        doc_result = await self.client.generate_with_retry(user, system)
+        documentation = self._clean_documentation(doc_result.text)
+
+        commit_context_name = target.display_name
+        doc_type_label = DOC_TYPE_LABELS.get(target.doc_type, "docs")
+        commit_system = (
+            "You generate natural, human sounding git commit messages. "
+            "Be concise and specific."
+        )
+        commit_user = (
+            f"Generate a commit message for this {doc_type_label.lower()}:\n\n"
+            f"{documentation[:500]}\n\n"
+            f"Code context: {commit_context_name} in {target.snippet.language.value} "
+            f"from {target.snippet.repo}\n\n"
+            f"Rules:\n- Start with a verb\n- Under 72 characters\n"
+            f"- Sounds natural\n- Return ONLY the message"
+        )
+        commit_result = await self.client.generate(
+            commit_user,
+            commit_system,
+            temperature = 0.4,
+        )
+        commit_message = self._clean_commit_message(commit_result.text)
+
+        generation_time = int(
+            (datetime.now() - start_time).total_seconds() * 1000
+        )
+        total_tokens = doc_result.total_tokens + commit_result.total_tokens
+        filename = self._generate_target_filename(target)
+
+        logger.info(
+            "documentation_generated",
+            target = target.display_name,
+            doc_type = target.doc_type.value,
+            repo = target.snippet.repo,
+            tokens = total_tokens,
+            time_ms = generation_time,
+        )
+
+        return GeneratedDocumentation(
+            content = documentation,
+            commit_message = commit_message,
+            snippet_filename = filename,
+            generated_at = datetime.now(),
+            tokens_used = total_tokens,
+            generation_time_ms = generation_time,
+            doc_type = target.doc_type,
+        )
+
+    def _generate_target_filename(self, target: DocumentationTarget) -> str:
+        """
+        Generate filename for a documentation target
+        """
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        name = target.display_name.lower()
+        name = re.sub(r"[^a-z0-9]+", "-", name)
+        name = name.strip("-")
+
+        if len(name) > 40:
+            name = name[: 40].rsplit("-", 1)[0]
+
+        return f"{date_str}_{name}.md"
+
     def _clean_documentation(self, text: str) -> str:
         """
         Clean up generated documentation
@@ -148,7 +282,7 @@ class DocumentationGenerator:
 
         if text.startswith("```"):
             lines = text.split("\n")
-            lines = lines[1:-1] if lines[-1].strip() == "```" else lines[1:]
+            lines = lines[1 :-1] if lines[-1].strip() == "```" else lines[1 :]
             text = "\n".join(lines)
 
         text = re.sub(
