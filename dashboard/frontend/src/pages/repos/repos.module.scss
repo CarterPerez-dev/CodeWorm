@@ -1,0 +1,147 @@
+// ©AngelaMos | 2026
+// repos.module.scss
+
+@use '@/styles' as *;
+
+.page {
+  @include flex-column;
+  gap: $space-6;
+}
+
+.table {
+  background: $bg-card;
+  border: 1px solid $border-default;
+  border-radius: $radius-lg;
+  overflow: hidden;
+}
+
+.thead {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.5fr 1fr;
+  padding: $space-3 $space-4;
+  background: $bg-card-hover;
+  border-bottom: 1px solid $border-default;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: $text-lighter;
+  text-transform: uppercase;
+  letter-spacing: $tracking-wide;
+
+  @include breakpoint-down('md') {
+    grid-template-columns: 2fr 1fr 1fr;
+  }
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.5fr 1fr;
+  padding: $space-3 $space-4;
+  border-bottom: 1px solid $border-muted;
+  align-items: center;
+  font-size: $font-size-sm;
+  @include transition-fast;
+
+  @include hover {
+    background: hsl(0, 0%, 9%);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  @include breakpoint-down('md') {
+    grid-template-columns: 2fr 1fr 1fr;
+  }
+}
+
+.name {
+  color: $text-default;
+  font-weight: $font-weight-medium;
+  font-family: $font-mono;
+  @include truncate;
+}
+
+.weight {
+  color: $text-light;
+}
+
+.docs {
+  color: $primary;
+  font-weight: $font-weight-medium;
+}
+
+.hideSmall {
+  @include breakpoint-down('md') {
+    display: none;
+  }
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: $radius-full;
+  flex-shrink: 0;
+
+  &.active {
+    background: $success;
+    box-shadow: 0 0 6px rgba($success, 0.5);
+  }
+
+  &.inactive {
+    background: $text-muted;
+  }
+}
+
+.statusLabel {
+  color: $text-lighter;
+  font-size: $font-size-xs;
+}
+
+.lastActivity {
+  color: $text-lighter;
+  font-size: $font-size-xs;
+}
+
+.empty {
+  @include flex-center;
+  padding: $space-10;
+  color: $text-muted;
+  font-size: $font-size-sm;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $space-4;
+
+  @include breakpoint-down('sm') {
+    grid-template-columns: 1fr;
+  }
+}
+
+.summaryCard {
+  @include flex-column;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-5;
+  @include card;
+}
+
+.summaryLabel {
+  font-size: $font-size-xs;
+  color: $text-lighter;
+  text-transform: uppercase;
+  letter-spacing: $tracking-wide;
+}
+
+.summaryValue {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-semibold;
+  color: $text-default;
+}

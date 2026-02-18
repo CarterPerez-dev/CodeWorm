@@ -9,7 +9,7 @@ import random
 from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from git import (
     GitCommandError,
@@ -19,6 +19,7 @@ from git import (
 from git.exc import GitError
 
 from codeworm.core import get_logger
+from codeworm.models import DocType
 
 if TYPE_CHECKING:
     from codeworm.llm.generator import GeneratedDocumentation
@@ -110,6 +111,22 @@ class DevLogRepository:
 
         return self._repo
 
+    DOC_TYPE_DIRS: ClassVar[dict[str,
+                                 str]] = {
+                                     "function_doc": "snippets",
+                                     "class_doc": "classes",
+                                     "file_doc": "files",
+                                     "module_doc": "modules",
+                                     "security_review": "reviews/security",
+                                     "performance_analysis":
+                                     "reviews/performance",
+                                     "til": "til",
+                                     "code_evolution": "evolution",
+                                     "pattern_analysis": "patterns",
+                                     "weekly_summary": "analysis/weekly",
+                                     "monthly_summary": "analysis/monthly",
+                                 }
+
     def ensure_directory_structure(self) -> None:
         """
         Create the DevLog directory structure if needed
@@ -120,6 +137,13 @@ class DevLogRepository:
             "snippets/javascript",
             "snippets/go",
             "snippets/rust",
+            "classes",
+            "files",
+            "modules",
+            "reviews/security",
+            "reviews/performance",
+            "til",
+            "evolution",
             "analysis/weekly",
             "analysis/monthly",
             "patterns",
@@ -138,11 +162,18 @@ class DevLogRepository:
         content: str,
         filename: str,
         language: str,
+        doc_type: DocType = DocType.FUNCTION_DOC,
     ) -> Path:
         """
-        Write a snippet file to the appropriate directory
+        Write a snippet file to the appropriate directory based on doc type
         """
-        snippet_dir = self.repo_path / "snippets" / language
+        base_dir = self.DOC_TYPE_DIRS.get(doc_type.value, "snippets")
+
+        if doc_type == DocType.FUNCTION_DOC:
+            snippet_dir = self.repo_path / base_dir / language
+        else:
+            snippet_dir = self.repo_path / base_dir
+
         snippet_dir.mkdir(parents = True, exist_ok = True)
 
         file_path = snippet_dir / filename
@@ -221,7 +252,9 @@ class DevLogRepository:
                 error_msg = str(e).lower()
 
                 if "conflict" in error_msg or "rejected" in error_msg:
-                    raise GitConflictError(f"Push rejected due to conflict: {e}") from e
+                    raise GitConflictError(
+                        f"Push rejected due to conflict: {e}"
+                    ) from e
 
                 if self._is_transient_error(error_msg):
                     logger.warning(

@@ -1,6 +1,6 @@
 [project]
 name = "codeworm"
-version = "0.1.0"
+version = "1.0.2"
 description = "Autonomous code documentation agent that intelligently curates and documents your code using local LLMs"
 authors = [
     {name = "Carter Perez", email = "cartertechsolution@gmail.com"}
@@ -44,6 +44,11 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "click>=8.3.1",
     "pyyaml>=6.0.2",
+    "redis[hiredis]>=5.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "websockets>=14.0",
+    "gunicorn>=23.0.0",
 ]
 
 [project.optional-dependencies]
@@ -79,6 +84,7 @@ ignore = ["E501", "B008", "S101", "ARG001", "S311", "S108"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+"dashboard/backend/api.py" = ["SIM118", "SIM401"]
 
 [tool.mypy]
 python_version = "3.12"

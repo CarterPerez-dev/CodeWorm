@@ -1,0 +1,107 @@
+// ©AngelaMos | 2026
+// current-activity.module.scss
+
+@use '@/styles' as *;
+
+.container {
+  @include card;
+  padding: $space-5;
+}
+
+.header {
+  @include flex-between;
+  margin-bottom: $space-4;
+}
+
+.title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $text-default;
+}
+
+.statusBadge {
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-medium;
+  letter-spacing: $tracking-wide;
+  text-transform: uppercase;
+  padding: $space-0-5 $space-2-5;
+  border-radius: $radius-full;
+  background: hsl(0, 0%, 14.1%);
+  color: $text-muted;
+
+  &.analyzing {
+    background: hsl(263 70% 50% / 20%);
+    color: hsl(263, 70%, 70%);
+  }
+
+  &.generating {
+    background: hsl(16 53% 50% / 20%);
+    color: $primary;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  &.committing {
+    background: hsl(142 76% 36% / 20%);
+    color: hsl(142, 76%, 46%);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.details {
+  @include flex-column;
+  gap: $space-3;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: $space-3;
+}
+
+.rowLabel {
+  font-size: $font-size-xs;
+  color: $text-lighter;
+  flex-shrink: 0;
+  width: 70px;
+}
+
+.rowValue {
+  font-size: $font-size-sm;
+  color: $text-default;
+  font-family: $font-mono;
+  @include truncate;
+}
+
+.docTypeBadge {
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-medium;
+  padding: $space-0-5 $space-2;
+  border-radius: $radius-sm;
+  background: hsl(263 70% 50% / 20%);
+  color: hsl(263, 70%, 70%);
+}
+
+.idle {
+  @include flex-center;
+  padding: $space-8 0;
+  color: $text-muted;
+  font-size: $font-size-sm;
+}
+
+.idleDot {
+  width: 8px;
+  height: 8px;
+  border-radius: $radius-full;
+  background: $text-muted;
+  margin-right: $space-2;
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}

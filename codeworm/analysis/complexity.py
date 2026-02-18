@@ -13,6 +13,7 @@ import lizard
 from codeworm.core import get_logger
 from codeworm.models import Language
 
+
 logger = get_logger("complexity")
 
 if TYPE_CHECKING:
@@ -176,8 +177,8 @@ class ComplexityAnalyzer:
                     except Exception as e:
                         logger.debug(
                             "file_analysis_failed",
-                            file=str(file_path),
-                            error=str(e)
+                            file = str(file_path),
+                            error = str(e)
                         )
                         continue
 

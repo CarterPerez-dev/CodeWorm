@@ -1,0 +1,152 @@
+// ©AngelaMos | 2026
+// stats-panel.module.scss
+
+@use '@/styles' as *;
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $space-4;
+
+  @include breakpoint-down('lg') {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @include breakpoint-down('sm') {
+    grid-template-columns: 1fr;
+  }
+}
+
+.statCard {
+  @include flex-column;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-5;
+  background: $bg-card;
+  border: 1px solid $border-default;
+  border-radius: $radius-lg;
+  @include transition-fast;
+
+  @include hover {
+    border-color: $border-strong;
+  }
+}
+
+.statLabel {
+  font-size: $font-size-xs;
+  color: $text-lighter;
+  text-transform: uppercase;
+  letter-spacing: $tracking-wide;
+}
+
+.statValue {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-semibold;
+  color: $text-default;
+  line-height: $line-height-none;
+
+  &.highlight {
+    color: $primary;
+  }
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-4;
+  margin-top: $space-4;
+
+  @include breakpoint-down('md') {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chartCard {
+  @include card;
+  padding: $space-5;
+}
+
+.chartTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $text-default;
+  margin-bottom: $space-4;
+}
+
+.chartWrap {
+  width: 100%;
+  height: 240px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2 $space-4;
+  margin-top: $space-3;
+  padding-top: $space-3;
+  border-top: 1px solid $border-muted;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: $space-1-5;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: $radius-full;
+  flex-shrink: 0;
+}
+
+.legendLabel {
+  font-size: $font-size-xs;
+  color: $text-lighter;
+}
+
+.legendValue {
+  font-size: $font-size-xs;
+  color: $text-light;
+  font-weight: $font-weight-medium;
+}
+
+.tooltip {
+  background: $bg-card;
+  border: 1px solid $border-strong;
+  border-radius: $radius-md;
+  padding: $space-2 $space-3;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.tooltipLabel {
+  font-size: $font-size-xs;
+  color: $text-light;
+  margin-bottom: $space-1;
+}
+
+.tooltipValue {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $text-default;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.tooltipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: $radius-full;
+  flex-shrink: 0;
+}
+
+.empty {
+  @include flex-center;
+  height: 240px;
+  color: $text-muted;
+  font-size: $font-size-sm;
+}
