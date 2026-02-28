@@ -106,7 +106,7 @@ class OllamaClient:
         """
         try:
             client = await self._get_client()
-            response = await client.get("/")
+            response = await client.get("/", timeout = 5.0)
             return response.status_code == 200
         except Exception:
             return False

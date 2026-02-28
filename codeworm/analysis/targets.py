@@ -7,16 +7,16 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from git import InvalidGitRepositoryError, Repo
 
-from codeworm.analysis.parser import CodeExtractor, ParserManager
+from codeworm.analysis.parser import CodeExtractor
 from codeworm.analysis.scanner import RepoScanner
 from codeworm.models import LANGUAGE_EXTENSIONS, CodeSnippet, DocType, Language
 
 if TYPE_CHECKING:
-    from codeworm.core.config import AnalyzerSettings, RepoEntry
+    from codeworm.core.config import RepoEntry
 
 
 @dataclass
@@ -55,7 +55,7 @@ class FileTargetFinder:
         for scanned_file in self.scanner.scan_repo(repo.path, repo.name):
             try:
                 source = scanned_file.path.read_text(encoding = "utf-8")
-            except Exception:
+            except Exception:  # noqa: S112
                 continue
 
             line_count = source.count("\n") + 1
@@ -130,7 +130,7 @@ class ClassTargetFinder:
         for scanned_file in self.scanner.scan_repo(repo.path, repo.name):
             try:
                 source = scanned_file.path.read_text(encoding = "utf-8")
-            except Exception:
+            except Exception:  # noqa: S112
                 continue
 
             extractor = CodeExtractor(source, scanned_file.language)
@@ -236,9 +236,9 @@ class ModuleTargetFinder:
                 continue
 
             init_content = ""
-            try:
+            try:  # noqa: SIM105
                 init_content = dirpath.read_text(encoding = "utf-8")
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
             file_listing = "\n".join(f"  - {f.name}" for f in sorted(py_files))
@@ -301,9 +301,9 @@ class ModuleTargetFinder:
                 continue
 
             index_content = ""
-            try:
+            try:  # noqa: SIM105
                 index_content = dirpath.read_text(encoding = "utf-8")
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
             file_listing = "\n".join(f"  - {f.name}" for f in sorted(ts_files))
@@ -380,7 +380,7 @@ class EvolutionTargetFinder:
             parent = commits[i + 1]
             try:
                 diffs = parent.diff(commit, create_patch = True)
-            except Exception:
+            except Exception:  # noqa: S112
                 continue
 
             for diff in diffs:
@@ -397,7 +397,7 @@ class EvolutionTargetFinder:
 
                 try:
                     diff_text = diff.diff.decode("utf-8", errors = "replace")
-                except Exception:
+                except Exception:  # noqa: S112
                     continue
 
                 if len(diff_text) < 20:
@@ -464,7 +464,7 @@ class PatternTargetFinder:
     """
     Finds design patterns across a repository
     """
-    PATTERN_SIGNATURES = {
+    PATTERN_SIGNATURES: ClassVar[dict] = {
         "singleton": {
             "indicators": ["_instance",
                            "__new__",
@@ -535,7 +535,7 @@ class PatternTargetFinder:
         for scanned_file in self.scanner.scan_repo(repo.path, repo.name):
             try:
                 source = scanned_file.path.read_text(encoding = "utf-8")
-            except Exception:
+            except Exception:  # noqa: S112
                 continue
 
             for pattern_name, pattern_info in self.PATTERN_SIGNATURES.items():

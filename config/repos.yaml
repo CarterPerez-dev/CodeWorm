@@ -35,7 +35,7 @@ repositories:
     enabled: true
 
   - name: oneIsNun_
-    path: ~/dev/CURRENT/oneIsNun_
+    path: ~/dev/CURRENT/COMPLETED/oneIsNun_
     weight: 6
     enabled: true
 
@@ -55,7 +55,7 @@ repositories:
     enabled: true
 
   - name: trash-gui
-    path: ~/dev/CURRENT/trash-gui
+    path: ~/dev/CURRENT/COMPLETED/trash-gui
     weight: 6
     enabled: true
 
@@ -102,4 +102,14 @@ repositories:
   - name: CodeWorm
     path: ~/dev/github/CodeWorm
     weight: 6
+    enabled: true
+
+  - name: Telehook
+    path: ~/dev/CURRENT/telegram-notification
+    weight: 5
+    enabled: true
+
+  - name: Yoshi-Audit
+    path: ~/dev/CURRENT/yoshi-audit
+    weight: 5
     enabled: true

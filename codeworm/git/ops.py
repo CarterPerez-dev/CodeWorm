@@ -181,6 +181,30 @@ class DevLogRepository:
 
         return file_path
 
+    def _recover_git_state(self) -> None:
+        """
+        Clean up any bad git state before committing
+        """
+        repo = self.repo
+        git_dir = Path(repo.git_dir)
+
+        index_lock = git_dir / "index.lock"
+        if index_lock.exists():
+            age = time.time() - index_lock.stat().st_mtime
+            if age > 60:
+                index_lock.unlink()
+                logger.warning(
+                    "removed_stale_lock_file",
+                    age_seconds = round(age)
+                )
+
+        try:
+            if repo.head.is_detached:
+                repo.git.checkout(self.branch)
+                logger.warning("recovered_detached_head", branch = self.branch)
+        except Exception as e:
+            logger.error("detached_head_recovery_failed", error = str(e))
+
     def commit(
         self,
         message: str,
@@ -189,6 +213,7 @@ class DevLogRepository:
         """
         Create a commit with the specified message
         """
+        self._recover_git_state()
         repo = self.repo
 
         if files:
