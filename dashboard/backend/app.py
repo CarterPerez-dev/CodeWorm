@@ -29,21 +29,21 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title="CodeWorm Dashboard",
-    version="1.0.2",
-    lifespan=lifespan,
+    title = "CodeWorm Dashboard",
+    version = "1.0.2",
+    lifespan = lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins = ["*"],
+    allow_credentials = True,
+    allow_methods = ["*"],
+    allow_headers = ["*"],
 )
 
-app.include_router(api_router, prefix="")
-app.include_router(ws_router, prefix="")
+app.include_router(api_router, prefix = "")
+app.include_router(ws_router, prefix = "")
 
 
 @app.get("/health")
@@ -53,4 +53,9 @@ async def health() -> JSONResponse:
 
 static_dir = Path(__file__).parent.parent / "frontend" / "dist"
 if static_dir.exists():
-    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+    app.mount(
+        "/",
+        StaticFiles(directory = str(static_dir),
+                    html = True),
+        name = "static"
+    )

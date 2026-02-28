@@ -42,9 +42,8 @@ class EventPublisher:
             return False
 
     def _publish(self, channel: str, data: dict) -> None:
-        if not self._connected:
-            if not self._check_connection():
-                return
+        if not self._connected and not self._check_connection():
+            return
         try:
             payload = orjson.dumps(data, default = str)
             with self._lock:
@@ -71,9 +70,9 @@ class EventPublisher:
         self._publish(self.CHANNEL_STATS, payload)
 
     def close(self) -> None:
-        try:
+        try:  # noqa: SIM105
             self._client.close()
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
 

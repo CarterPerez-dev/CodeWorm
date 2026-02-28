@@ -144,9 +144,21 @@ class DashboardSettings(BaseModel):
     Settings for the web dashboard
     """
     enabled: bool = False
-    host: str = "0.0.0.0"
+    host: str = "0.0.0.0"  # noqa: S104
     port: int = 8420
     redis: RedisSettings = Field(default_factory = RedisSettings)
+
+
+class TelegramSettings(BaseModel):
+    """
+    Settings for Telegram failure notifications
+    """
+    enabled: bool = False
+    bot_token: str = ""
+    chat_id: str = ""
+    alert_after_failures: int = 5
+    alert_on_push_failure: bool = True
+    alert_on_git_wedge: bool = True
 
 
 class RepoEntry(BaseModel):
@@ -204,6 +216,7 @@ class CodeWormSettings(BaseSettings):
         default_factory = DocumentationSettings
     )
     dashboard: DashboardSettings = Field(default_factory = DashboardSettings)
+    telegram: TelegramSettings = Field(default_factory = TelegramSettings)
     repos: list[RepoEntry] = Field(default_factory = list)
     prompts: PromptSettings = Field(default_factory = PromptSettings)
     github_token: SecretStr | None = None
@@ -278,6 +291,16 @@ def load_config_from_yaml(config_dir: Path | None = None) -> dict:
     return config
 
 
+def _strip_empty_strings(d: dict) -> dict:
+    result = {}
+    for k, v in d.items():
+        if isinstance(v, dict):
+            result[k] = _strip_empty_strings(v)
+        elif v != "":
+            result[k] = v
+    return result
+
+
 _settings: CodeWormSettings | None = None
 
 
@@ -313,6 +336,7 @@ def load_settings(
         config_dir = Path(os.path.expandvars(str(config_dir))).expanduser()
 
     yaml_config = load_config_from_yaml(config_dir)
+    yaml_config = _strip_empty_strings(yaml_config)
 
     merged = merge_configs(yaml_config, overrides)
 

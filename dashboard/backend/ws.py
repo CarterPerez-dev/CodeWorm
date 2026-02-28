@@ -13,6 +13,7 @@ from typing import Any
 import orjson
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+
 router = APIRouter()
 
 LOG_BUFFER_SIZE = 200
@@ -21,19 +22,21 @@ LOG_BUFFER_SIZE = 200
 class ConnectionManager:
     def __init__(self) -> None:
         self.active: list[WebSocket] = []
-        self.log_buffer: deque[dict[str, Any]] = deque(maxlen=LOG_BUFFER_SIZE)
+        self.log_buffer: deque[dict[str, Any]] = deque(maxlen = LOG_BUFFER_SIZE)
 
     async def connect(self, websocket: WebSocket) -> None:
         await websocket.accept()
         self.active.append(websocket)
         if self.log_buffer:
-            history = orjson.dumps({
-                "channel": "codeworm:history",
-                "data": list(self.log_buffer),
-            }).decode("utf-8")
-            try:
+            history = orjson.dumps(
+                {
+                    "channel": "codeworm:history",
+                    "data": list(self.log_buffer),
+                }
+            ).decode("utf-8")
+            try:  # noqa: SIM105
                 await websocket.send_text(history)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
     def disconnect(self, websocket: WebSocket) -> None:
@@ -66,7 +69,7 @@ async def start_redis_subscriber() -> None:
     try:
         import redis.asyncio as aioredis
 
-        client = aioredis.from_url(redis_url, decode_responses=True)
+        client = aioredis.from_url(redis_url, decode_responses = True)
         await client.ping()
     except Exception:
         return
@@ -113,6 +116,10 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         while True:
             data = await websocket.receive_text()
             if data == "ping":
-                await websocket.send_text(orjson.dumps({"type": "pong"}).decode("utf-8"))
-    except WebSocketDisconnect:
+                await websocket.send_text(
+                    orjson.dumps({
+                        "type": "pong"
+                    }).decode("utf-8")
+                )
+    except (WebSocketDisconnect, RuntimeError):
         manager.disconnect(websocket)

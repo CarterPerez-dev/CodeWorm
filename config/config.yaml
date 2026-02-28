@@ -90,3 +90,11 @@ dashboard:
     enabled: true
     host: localhost
     port: 26849
+
+telegram:
+  enabled: true
+  bot_token: ""
+  chat_id: ""
+  alert_after_failures: 3
+  alert_on_push_failure: true
+  alert_on_git_wedge: true

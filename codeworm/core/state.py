@@ -77,7 +77,7 @@ class StateManager:
         """
         Get a database connection with row factory
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout = 10)
         conn.row_factory = sqlite3.Row
         return conn
 

@@ -18,6 +18,7 @@ from dashboard.backend.models import (
     StatsResponse,
 )
 
+
 router = APIRouter()
 
 
@@ -36,27 +37,30 @@ def _has_column(conn: sqlite3.Connection, table: str, column: str) -> bool:
     return column in {row[1] for row in cursor.fetchall()}
 
 
-@router.get("/stats", response_model=StatsResponse)
+@router.get("/stats", response_model = StatsResponse)
 async def get_stats() -> StatsResponse:
     db = _get_db_path()
     if not db.exists():
         return StatsResponse()
 
     with _get_conn() as conn:
-        total = conn.execute(
-            "SELECT COUNT(*) FROM documented_snippets"
-        ).fetchone()[0]
+        total = conn.execute("SELECT COUNT(*) FROM documented_snippets"
+                             ).fetchone()[0]
 
-        by_repo = dict(conn.execute(
-            "SELECT source_repo, COUNT(*) FROM documented_snippets "
-            "GROUP BY source_repo"
-        ).fetchall())
+        by_repo = dict(
+            conn.execute(
+                "SELECT source_repo, COUNT(*) FROM documented_snippets "
+                "GROUP BY source_repo"
+            ).fetchall()
+        )
 
         if _has_column(conn, "documented_snippets", "doc_type"):
-            by_doc_type = dict(conn.execute(
-                "SELECT doc_type, COUNT(*) FROM documented_snippets "
-                "GROUP BY doc_type"
-            ).fetchall())
+            by_doc_type = dict(
+                conn.execute(
+                    "SELECT doc_type, COUNT(*) FROM documented_snippets "
+                    "GROUP BY doc_type"
+                ).fetchall()
+            )
         else:
             by_doc_type = {"function_doc": total}
 
@@ -91,17 +95,17 @@ async def get_stats() -> StatsResponse:
         by_language = dict(lang_rows)
 
     return StatsResponse(
-        total_documented=total,
-        by_repo=by_repo,
-        by_language=by_language,
-        by_doc_type=by_doc_type,
-        last_7_days=last_7,
-        last_30_days=last_30,
-        today=today,
+        total_documented = total,
+        by_repo = by_repo,
+        by_language = by_language,
+        by_doc_type = by_doc_type,
+        last_7_days = last_7,
+        last_30_days = last_30,
+        today = today,
     )
 
 
-@router.get("/repos", response_model=list[RepoStatus])
+@router.get("/repos", response_model = list[RepoStatus])
 async def get_repos() -> list[RepoStatus]:
     config_dir = Path(os.environ.get("CODEWORM_CONFIG_DIR", "config"))
     repos_path = config_dir / "repos.yaml"
@@ -120,8 +124,8 @@ async def get_repos() -> list[RepoStatus]:
         if db.exists():
             with _get_conn() as conn:
                 for row in conn.execute(
-                    "SELECT source_repo, COUNT(*), MAX(documented_at) "
-                    "FROM documented_snippets GROUP BY source_repo"
+                        "SELECT source_repo, COUNT(*), MAX(documented_at) "
+                        "FROM documented_snippets GROUP BY source_repo"
                 ).fetchall():
                     repo_counts[row[0]] = row[1]
                     repo_last[row[0]] = row[2]
@@ -133,24 +137,33 @@ async def get_repos() -> list[RepoStatus]:
             last_str = repo_last.get(name)
             last_dt = datetime.fromisoformat(last_str) if last_str else None
 
-            repos.append(RepoStatus(
-                name=name,
-                path=str(entry.get("path", "")),
-                weight=entry.get("weight", 5),
-                enabled=entry.get("enabled", True),
-                docs_generated=repo_counts.get(name, 0),
-                last_activity=last_dt,
-            ))
+            repos.append(
+                RepoStatus(
+                    name = name,
+                    path = str(entry.get("path",
+                                         "")),
+                    weight = entry.get("weight",
+                                       5),
+                    enabled = entry.get("enabled",
+                                        True),
+                    docs_generated = repo_counts.get(name,
+                                                     0),
+                    last_activity = last_dt,
+                )
+            )
 
     return repos
 
 
-@router.get("/recent", response_model=list[RecentDoc])
+@router.get("/recent", response_model = list[RecentDoc])
 async def get_recent(
-    limit: int = Query(default=50, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
-    repo: str | None = Query(default=None),
-    doc_type: str | None = Query(default=None),
+    limit: int = Query(default = 50,
+                       ge = 1,
+                       le = 200),
+    offset: int = Query(default = 0,
+                        ge = 0),
+    repo: str | None = Query(default = None),
+    doc_type: str | None = Query(default = None),
 ) -> list[RecentDoc]:
     db = _get_db_path()
     if not db.exists():
@@ -182,24 +195,29 @@ async def get_recent(
 
     results = []
     for row in rows:
-        results.append(RecentDoc(
-            id=row["id"],
-            source_repo=row["source_repo"],
-            source_file=row["source_file"],
-            function_name=row["function_name"],
-            class_name=row["class_name"],
-            doc_type=row["doc_type"] if "doc_type" in row.keys() else "function_doc",
-            documented_at=row["documented_at"],
-            snippet_path=row["snippet_path"],
-            git_commit=row["git_commit"],
-        ))
+        results.append(
+            RecentDoc(
+                id = row["id"],
+                source_repo = row["source_repo"],
+                source_file = row["source_file"],
+                function_name = row["function_name"],
+                class_name = row["class_name"],
+                doc_type = row["doc_type"]
+                if "doc_type" in row.keys() else "function_doc",
+                documented_at = row["documented_at"],
+                snippet_path = row["snippet_path"],
+                git_commit = row["git_commit"],
+            )
+        )
 
     return results
 
 
-@router.get("/activity", response_model=list[ActivityDay])
+@router.get("/activity", response_model = list[ActivityDay])
 async def get_activity(
-    days: int = Query(default=90, ge=1, le=365),
+    days: int = Query(default = 90,
+                      ge = 1,
+                      le = 365),
 ) -> list[ActivityDay]:
     db = _get_db_path()
     if not db.exists():
@@ -211,22 +229,22 @@ async def get_activity(
             "FROM documented_snippets "
             "WHERE documented_at > datetime('now', ?) "
             "GROUP BY day ORDER BY day",
-            (f"-{days} days",),
+            (f"-{days} days",
+             ),
         ).fetchall()
 
-    return [ActivityDay(date=row["day"], count=row["cnt"]) for row in rows]
+    return [ActivityDay(date = row["day"], count = row["cnt"]) for row in rows]
 
 
-@router.get("/languages", response_model=list[LanguageBreakdown])
+@router.get("/languages", response_model = list[LanguageBreakdown])
 async def get_languages() -> list[LanguageBreakdown]:
     db = _get_db_path()
     if not db.exists():
         return []
 
     with _get_conn() as conn:
-        total = conn.execute(
-            "SELECT COUNT(*) FROM documented_snippets"
-        ).fetchone()[0]
+        total = conn.execute("SELECT COUNT(*) FROM documented_snippets"
+                             ).fetchone()[0]
 
         if total == 0:
             return []
@@ -247,9 +265,9 @@ async def get_languages() -> list[LanguageBreakdown]:
 
     return [
         LanguageBreakdown(
-            language=row["lang"],
-            count=row["cnt"],
-            percentage=round(row["cnt"] / total * 100, 1),
-        )
-        for row in rows
+            language = row["lang"],
+            count = row["cnt"],
+            percentage = round(row["cnt"] / total * 100,
+                               1),
+        ) for row in rows
     ]

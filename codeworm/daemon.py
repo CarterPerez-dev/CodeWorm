@@ -8,7 +8,7 @@ import asyncio
 import signal
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -26,6 +26,7 @@ from codeworm.core import (
     load_settings,
 )
 from codeworm.core.events import get_publisher
+from codeworm.core.notifier import CodeWormNotifier
 from codeworm.git import DevLogRepository
 from codeworm.llm import (
     DocumentationGenerator,
@@ -50,6 +51,7 @@ class CycleStats:
     skipped_cycles: int = 0
     consecutive_failures: int = 0
     consecutive_ollama_failures: int = 0
+    consecutive_push_failures: int = 0
     last_success: datetime | None = None
     last_failure: datetime | None = None
     last_failure_reason: str = ""
@@ -139,6 +141,7 @@ class CodeWormDaemon:
         self.running = False
 
         self.stats = CycleStats()
+        self._start_time = datetime.now()
         self.state = StateManager(settings.db_path)
         self.devlog = DevLogRepository(
             repo_path = settings.devlog.repo_path,
@@ -156,6 +159,11 @@ class CodeWormDaemon:
         self.scheduler = CodeWormScheduler(settings.schedule)
         self._llm_client: OllamaClient | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._dead_mans_task: asyncio.Task | None = None
+
+        self.notifier: CodeWormNotifier | None = None
+        if settings.telegram.enabled and settings.telegram.bot_token:
+            self.notifier = CodeWormNotifier(settings.telegram)
 
         self._setup_signals()
 
@@ -217,6 +225,14 @@ class CodeWormDaemon:
                 consecutive_failures = self.stats.consecutive_ollama_failures,
             )
 
+            if (self.notifier and self.stats.consecutive_ollama_failures
+                    == self.settings.telegram.alert_after_failures):
+                await self.notifier.send_alert(
+                    f"Ollama unavailable — {self.stats.consecutive_ollama_failures} consecutive failures",
+                    details =
+                    f"Retrying every {wait_seconds}s. Daemon is paused until Ollama recovers.",
+                )
+
             for _ in range(wait_seconds):
                 if not self.running:
                     return False
@@ -241,6 +257,8 @@ class CodeWormDaemon:
         if self._llm_client:
             await self._llm_client.close()
             self._llm_client = None
+        if self.notifier:
+            await self.notifier.close()
 
     def run(self) -> None:
         """
@@ -301,6 +319,8 @@ class CodeWormDaemon:
             self.logger.info("next_scheduled_run", time = next_run.isoformat())
             self._emit_event("next_cycle", {"time": next_run.isoformat()})
 
+        self._dead_mans_task = asyncio.create_task(self._dead_mans_switch())
+
         while self.running:
             await asyncio.sleep(1)
 
@@ -308,6 +328,44 @@ class CodeWormDaemon:
             "daemon_stopped",
             stats = self.stats.to_dict(),
         )
+
+    def _tail_log(self, lines: int = 20) -> str:
+        log_path = Path("/tmp/codeworm.log")
+        try:
+            text = log_path.read_text(encoding = "utf-8", errors = "replace")
+            readable = [line for line in text.splitlines() if not line.startswith("{")]
+            tail = readable[-lines :]
+            return "\n".join(tail)
+        except Exception:
+            return "(log unavailable)"
+
+    async def _dead_mans_switch(self) -> None:
+        check_interval = 300
+        alert_threshold = 2700
+        alerted = False
+
+        await asyncio.sleep(check_interval)
+
+        while self.running:
+            reference = self.stats.last_success or self._start_time
+            age = (datetime.now() - reference).total_seconds()
+            if age > alert_threshold and not alerted:
+                self.logger.warning(
+                    "dead_mans_switch_triggered",
+                    minutes_since_last_commit = round(age / 60,
+                                                      1),
+                )
+                if self.notifier:
+                    log_tail = self._tail_log(20)
+                    await self.notifier.send_alert(
+                        f"No commits in {int(age / 60)} minutes",
+                        details = f"<pre>{log_tail}</pre>",
+                    )
+                alerted = True
+            elif age <= alert_threshold and alerted:
+                alerted = False
+
+            await asyncio.sleep(check_interval)
 
     def _on_scheduled_task(self) -> None:
         """
@@ -319,14 +377,19 @@ class CodeWormDaemon:
                 self._loop,
             )
             try:
-                future.result(timeout = 900)
+                future.result(timeout = 1800)
             except Exception as e:
                 self.logger.exception("scheduled_task_error", error = str(e))
                 self.stats.record_failure(f"task_error: {e}")
+                if self.notifier and self.stats.consecutive_failures >= self.settings.telegram.alert_after_failures:
+                    self.notifier.send_error_sync(e, "scheduler")
 
             next_run = self.scheduler.get_next_run_time()
             if next_run:
-                self.logger.info("next_scheduled_run", time = next_run.isoformat())
+                self.logger.info(
+                    "next_scheduled_run",
+                    time = next_run.isoformat()
+                )
                 self._emit_event("next_cycle", {"time": next_run.isoformat()})
 
     async def _execute_documentation_cycle(self) -> None:
@@ -355,39 +418,54 @@ class CodeWormDaemon:
         if not await self._ensure_ollama_ready():
             return
 
-        target = await self._find_documentation_target()
-        if not target:
-            self.stats.record_skip("no_candidates")
-            self.logger.warning(
-                "cycle_skipped_no_candidates",
-                repos_exhausted = list(self.stats.repos_exhausted),
+        try:
+            target = await self._find_documentation_target()
+            if not target:
+                self.stats.record_skip("no_candidates")
+                self.logger.warning(
+                    "cycle_skipped_no_candidates",
+                    repos_exhausted = list(self.stats.repos_exhausted),
+                )
+                if self.notifier and self.stats.skipped_cycles >= self.settings.telegram.alert_after_failures:
+                    await self.notifier.send_alert(
+                        f"{self.stats.skipped_cycles} cycles skipped — no candidates found",
+                        details =
+                        f"Repos exhausted: {list(self.stats.repos_exhausted)}",
+                    )
+                self.stats.repos_exhausted.clear()
+                next_run = self.scheduler.get_next_run_time()
+                if next_run:
+                    self._emit_event("next_cycle", {"time": next_run.isoformat()})
+                return
+
+            self._emit_event(
+                "analyzing",
+                {
+                    "target": target.display_name,
+                    "doc_type": target.doc_type.value,
+                    "repo": target.snippet.repo,
+                }
             )
-            self.stats.repos_exhausted.clear()
+
+            success = await self._document_target(target)
+            if success:
+                self.stats.record_success()
+                self._log_cycle_stats()
+                self._emit_stats()
+            else:
+                self.stats.record_failure("documentation_failed")
+                if (self.notifier and self.stats.consecutive_failures
+                        >= self.settings.telegram.alert_after_failures):
+                    await self.notifier.send_alert(
+                        f"{self.stats.consecutive_failures} consecutive documentation failures",
+                        last_error = self.stats.last_failure_reason,
+                    )
+
             next_run = self.scheduler.get_next_run_time()
             if next_run:
                 self._emit_event("next_cycle", {"time": next_run.isoformat()})
-            return
-
-        self._emit_event(
-            "analyzing",
-            {
-                "target": target.display_name,
-                "doc_type": target.doc_type.value,
-                "repo": target.snippet.repo,
-            }
-        )
-
-        success = await self._document_target(target)
-        if success:
-            self.stats.record_success()
-            self._log_cycle_stats()
-            self._emit_stats()
-        else:
-            self.stats.record_failure("documentation_failed")
-
-        next_run = self.scheduler.get_next_run_time()
-        if next_run:
-            self._emit_event("next_cycle", {"time": next_run.isoformat()})
+        finally:
+            self.analyzer.close_repos()
 
     async def _find_documentation_target(self) -> DocumentationTarget | None:
         """
@@ -403,7 +481,7 @@ class CodeWormDaemon:
 
         all_types = list(type_weights.keys())
 
-        for type_str in [selected_type.value] + all_types:
+        for type_str in [selected_type.value, *all_types]:
             try:
                 doc_type = DocType(type_str)
             except ValueError:
@@ -553,8 +631,20 @@ class CodeWormDaemon:
                 try:
                     self.devlog.push()
                     self.logger.info("push_successful")
+                    self.stats.consecutive_push_failures = 0
                 except Exception as e:
-                    self.logger.warning("push_failed", error = str(e))
+                    self.stats.consecutive_push_failures += 1
+                    error_str = str(e)
+                    self.logger.warning("push_failed", error = error_str)
+                    if self.notifier and self.settings.telegram.alert_on_push_failure:
+                        if "GH013" in error_str or "secret" in error_str.lower():
+                            await self.notifier.send_alert(
+                                "Push blocked — secret scanning violation",
+                                last_error = error_str[: 300],
+                                details = "Manual intervention required.",
+                            )
+                        elif self.stats.consecutive_push_failures >= self.settings.telegram.alert_after_failures:
+                            await self.notifier.send_error(e, "git.push")
 
             return True
 

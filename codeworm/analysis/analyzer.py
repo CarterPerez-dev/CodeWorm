@@ -78,12 +78,34 @@ class CodeAnalyzer:
         """
         Get or create git repo instance for a path
         """
-        if repo_path not in self._git_repos:
-            try:
-                self._git_repos[repo_path] = Repo(repo_path)
-            except InvalidGitRepositoryError:
-                self._git_repos[repo_path] = None
+        if repo_path in self._git_repos:
+            return self._git_repos[repo_path]
+        try:
+            repo = Repo(repo_path, search_parent_directories = True)
+            git_root = Path(repo.working_dir)
+            if git_root in self._git_repos:
+                repo.close()
+                self._git_repos[repo_path] = self._git_repos[git_root]
+            else:
+                self._git_repos[git_root] = repo
+                self._git_repos[repo_path] = repo
+        except InvalidGitRepositoryError:
+            self._git_repos[repo_path] = None
         return self._git_repos[repo_path]
+
+    def close_repos(self) -> None:
+        """
+        Close all cached git repo handles and clear the cache
+        """
+        seen = set()
+        for repo in self._git_repos.values():
+            if repo is not None and id(repo) not in seen:
+                seen.add(id(repo))
+                try:  # noqa: SIM105
+                    repo.close()
+                except Exception:  # noqa: S110
+                    pass
+        self._git_repos.clear()
 
     def analyze_file(self,
                      scanned_file: ScannedFile) -> Iterator[AnalysisCandidate]:
@@ -95,7 +117,11 @@ class CodeAnalyzer:
         except Exception:
             return
 
-        extractor = CodeExtractor(source, scanned_file.language)
+        try:
+            extractor = CodeExtractor(source, scanned_file.language)
+        except Exception:
+            return
+
         complexity_results = self.complexity_analyzer.analyze_source(
             source,
             str(scanned_file.path),
@@ -107,65 +133,70 @@ class CodeAnalyzer:
             self.scorer.git_repo = git_repo
 
         for parsed_func in extractor.extract_functions():
-            if self._should_skip_function(parsed_func):
+            try:
+                if self._should_skip_function(parsed_func):
+                    continue
+
+                complexity = complexity_map.get(parsed_func.name)
+                if not complexity:
+                    for name, metrics in complexity_map.items():
+                        if name.endswith(f".{parsed_func.name}"):
+                            complexity = metrics
+                            break
+
+                git_stats = self.scorer.get_git_stats(
+                    scanned_file.path,
+                    parsed_func.start_line,
+                    parsed_func.end_line,
+                )
+
+                if complexity:
+                    interest = self.scorer.score(
+                        complexity,
+                        git_stats,
+                        parsed_func.decorators,
+                        parsed_func.is_async,
+                        parsed_func.source,
+                    )
+                else:
+                    interest = InterestScore(
+                        total = 20,
+                        complexity_score = 0,
+                        length_score = 0,
+                        nesting_score = 0,
+                        parameter_score = 0,
+                        churn_score = 0,
+                        novelty_score = 0,
+                    )
+
+                snippet = CodeSnippet(
+                    repo = scanned_file.repo_name,
+                    file_path = scanned_file.path,
+                    function_name = parsed_func.name,
+                    class_name = parsed_func.class_name,
+                    language = scanned_file.language,
+                    source = parsed_func.source,
+                    start_line = parsed_func.start_line,
+                    end_line = parsed_func.end_line,
+                    complexity = complexity.cyclomatic_complexity
+                    if complexity else 0,
+                    nesting_depth = complexity.max_nesting_depth
+                    if complexity else 0,
+                    parameter_count = complexity.parameter_count
+                    if complexity else 0,
+                    interest_score = interest.total,
+                )
+
+                yield AnalysisCandidate(
+                    snippet = snippet,
+                    parsed_function = parsed_func,
+                    complexity = complexity,
+                    git_stats = git_stats,
+                    interest_score = interest,
+                    scanned_file = scanned_file,
+                )
+            except Exception:  # noqa: S112
                 continue
-
-            complexity = complexity_map.get(parsed_func.name)
-            if not complexity:
-                for name, metrics in complexity_map.items():
-                    if name.endswith(f".{parsed_func.name}"):
-                        complexity = metrics
-                        break
-
-            git_stats = self.scorer.get_git_stats(
-                scanned_file.path,
-                parsed_func.start_line,
-                parsed_func.end_line,
-            )
-
-            if complexity:
-                interest = self.scorer.score(
-                    complexity,
-                    git_stats,
-                    parsed_func.decorators,
-                    parsed_func.is_async,
-                    parsed_func.source,
-                )
-            else:
-                interest = InterestScore(
-                    total = 20,
-                    complexity_score = 0,
-                    length_score = 0,
-                    nesting_score = 0,
-                    parameter_score = 0,
-                    churn_score = 0,
-                    novelty_score = 0,
-                )
-
-            snippet = CodeSnippet(
-                repo = scanned_file.repo_name,
-                file_path = scanned_file.path,
-                function_name = parsed_func.name,
-                class_name = parsed_func.class_name,
-                language = scanned_file.language,
-                source = parsed_func.source,
-                start_line = parsed_func.start_line,
-                end_line = parsed_func.end_line,
-                complexity = complexity.cyclomatic_complexity
-                if complexity else 0,
-                nesting_depth = complexity.max_nesting_depth if complexity else 0,
-                parameter_count = complexity.parameter_count if complexity else 0,
-                interest_score = interest.total,
-            )
-
-            yield AnalysisCandidate(
-                snippet = snippet,
-                parsed_function = parsed_func,
-                complexity = complexity,
-                git_stats = git_stats,
-                interest_score = interest,
-                scanned_file = scanned_file,
-            )
 
     def _should_skip_function(self, func: ParsedFunction) -> bool:
         """
